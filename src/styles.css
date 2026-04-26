@@ -19,48 +19,39 @@
   text-decoration: var(--shiki-dark-text-decoration) !important;
 }
 
-/* ─── Shiki : style du bloc de code ────────────────────────────────────── */
-
-.shiki {
-  border-radius: 0.5rem;
-  padding: 1rem 1.25rem;
-  overflow-x: auto;
-  font-size: 0.875rem;
-  line-height: 1.75;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-}
-
-/* ─── Prose : empêcher Tailwind Typography d'écraser Shiki ─────────────── */
-
-.prose pre {
-  background-color: transparent !important;
-  margin: 0.25rem 0 !important;
-  padding: 0 !important;
-  border-radius: 0 !important;
-}
-
-.prose :where(pre):not(:where([class~=not-prose],[class~=not-prose] *)) {
-  background-color: transparent;
-  padding: 0;
-}
-
-.prose code {
-  background-color: transparent !important;
-  padding: 0 !important;
-  font-size: inherit !important;
-  font-weight: inherit !important;
-}
-
-.prose code::before,
-.prose code::after {
-  content: "" !important;
-}
-
 /* ─── Corrections Tailwind v4 pour custom elements ─────────────────────── */
 
 demo-counter, demo-alert, demo-badge {
   display: block;
 }
+
+/* ─── Scrollbar dark mode ───────────────────────────────────────────────── */
+
+/* Navigateurs Chromium / Safari (WebKit) */
+:root {
+  --scrollbar-thumb: #cbd5e1;
+  --scrollbar-thumb-hover: #94a3b8;
+}
+
+.dark {
+  --scrollbar-thumb: #334155;
+  --scrollbar-thumb-hover: #475569;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover { background-color: var(--scrollbar-thumb-hover); }
 
 /* ─── Animations de chargement ──────────────────────────────────────────── */
 

@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { MarkdownComponent } from 'ngx-md';
+import { MarkdownComponent } from 'shikidown';
 
-const INITIAL_CONTENT = `# Playground ngx-md 🎮
+const INITIAL_CONTENT = `# Playground shikidown 🎮
 
 Éditez ce Markdown et voyez le rendu en temps réel !
 
@@ -38,8 +38,8 @@ export class MonComposant {
 \`\`\`
 
 \`\`\`bash
-npm install ngx-md
-ng build ngx-md
+npm install shikidown
+ng build shikidown
 \`\`\`
 
 ## Composants Angular embarqués
@@ -56,14 +56,14 @@ ng build ngx-md
 
 | Librairie       | Version | Rôle                          |
 |-----------------|---------|-------------------------------|
-| \`ngx-md\`      | 1.0     | Librairie Angular de rendu    |
+| \`shikidown\`      | 1.0     | Librairie Angular de rendu    |
 | \`markdown-it\` | 14.x    | Parser Markdown               |
 | \`shiki\`       | 4.x     | Syntax highlighting           |
 | \`tailwindcss\` | 4.x     | Styles utilitaires            |
 
 ---
 
-Créé avec ❤️ par **ngx-md**
+Créé avec ❤️ par **shikidown**
 `;
 
 interface Sample {
@@ -83,7 +83,7 @@ console.log(add(2, 3)); // 5
 \`\`\`
 
 \`\`\`html
-<ngx-md [content]="md" class="prose dark:prose-invert" />
+<shikidown [content]="md" class="prose dark:prose-invert" />
 \`\`\`
 
 \`\`\`css
@@ -91,7 +91,7 @@ console.log(add(2, 3)); // 5
 \`\`\`
 
 \`\`\`json
-{ "name": "ngx-md", "version": "1.0.0" }
+{ "name": "shikidown", "version": "1.0.0" }
 \`\`\``,
   },
   {
@@ -159,7 +159,7 @@ console.log(add(2, 3)); // 5
             APERÇU
           </div>
           <div class="flex-1 p-6 overflow-auto">
-            <ngx-md
+            <shikidown
               [content]="content()"
 
               class="prose prose-slate dark:prose-invert max-w-none"

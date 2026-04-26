@@ -39,4 +39,17 @@ export interface MarkdownConfig {
   plugins?: Array<(md: unknown) => void>;
   /** Options markdown-it personnalisées, fusionnées avec les défauts */
   markdownOptions?: MarkdownItOptions;
+  /**
+   * Active le rendu incrémental par blocs dans `MarkdownComponent`.
+   * Seuls les blocs dont le texte source a changé sont re-parsés et re-rendus.
+   * Les blocs inchangés sont servis depuis le cache → Shiki ne re-colorie pas inutilement.
+   * N'a aucun effet sur `MarkdownPipe`.
+   * @default false
+   */
+  incrementalRendering?: boolean;
+  /**
+   * Taille maximale du cache de blocs rendus (entrées les plus anciennes évincées en premier).
+   * @default 256
+   */
+  blockCacheSize?: number;
 }

@@ -14,7 +14,7 @@
     "target": "ES2022",
     "module": "preserve",
     "paths": {
-      "ngx-md": ["projects/ngx-md/src/public-api.ts"]
+      "shikidown": ["projects/shikidown/src/public-api.ts"]
     }
   },
   "angularCompilerOptions": {
@@ -27,6 +27,6 @@
   "references": [
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.spec.json" },
-    { "path": "./projects/ngx-md/tsconfig.lib.json" }
+    { "path": "./projects/shikidown/tsconfig.lib.json" }
   ]
 }

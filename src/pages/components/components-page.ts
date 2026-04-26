@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { MarkdownComponent } from 'ngx-md';
+import { MarkdownComponent } from 'shikidown';
 
 const COUNTER_MD = `
 ## Compteur interactif \`<demo-counter>\`
@@ -105,7 +105,7 @@ Votez pour la prochaine feature :
 
       @for (section of sections; track section.md) {
         <section class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 overflow-hidden">
-          <ngx-md
+          <shikidown
             [content]="section.md"
   
             class="prose prose-slate dark:prose-invert max-w-none"

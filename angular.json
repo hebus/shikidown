@@ -6,23 +6,23 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "ngx-md": {
+    "shikidown": {
       "projectType": "library",
-      "root": "projects/ngx-md",
-      "sourceRoot": "projects/ngx-md/src",
+      "root": "projects/shikidown",
+      "sourceRoot": "projects/shikidown/src",
       "prefix": "ngx",
       "architect": {
         "build": {
           "builder": "@angular/build:ng-packagr",
           "options": {
-            "project": "projects/ngx-md/ng-package.json"
+            "project": "projects/shikidown/ng-package.json"
           },
           "configurations": {
             "production": {
-              "tsConfig": "projects/ngx-md/tsconfig.lib.prod.json"
+              "tsConfig": "projects/shikidown/tsconfig.lib.prod.json"
             },
             "development": {
-              "tsConfig": "projects/ngx-md/tsconfig.lib.json"
+              "tsConfig": "projects/shikidown/tsconfig.lib.json"
             }
           },
           "defaultConfiguration": "production"

@@ -1,6 +1,6 @@
 import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
-import { provideMarkdown } from 'ngx-md';
+import { provideMarkdown } from 'shikidown';
 import { routes } from './app.routes';
 import { DemoCounterComponent } from '../components/demo-counter/demo-counter';
 import { DemoAlertComponent } from '../components/demo-alert/demo-alert';
@@ -13,6 +13,7 @@ export const appConfig: ApplicationConfig = {
     provideMarkdown({
       theme: { dark: 'github-dark', light: "catppuccin-latte" },
       languages: ['angular-html', 'angular-ts', 'typescript', 'javascript', 'html', 'css', 'bash', 'json', 'markdown', 'python', 'rust'],
+      incrementalRendering: true,
       components: {
         'demo-counter': DemoCounterComponent,
         'demo-alert':   DemoAlertComponent,

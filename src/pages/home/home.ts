@@ -1,11 +1,11 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { MarkdownComponent } from 'ngx-md';
+import { MarkdownComponent } from 'shikidown';
 
 const HERO_MARKDOWN = `
 # Markdown enrichi de composants Angular
 
-**ngx-md** transforme vos fichiers Markdown en expériences interactives.
+**shikidown** transforme vos fichiers Markdown en expériences interactives.
 Associez la puissance de \`markdown-it\`, la beauté de \`shiki\` et la réactivité d'Angular 21.
 
 \`\`\`typescript
@@ -23,7 +23,7 @@ export const appConfig: ApplicationConfig = {
 Puis dans votre template :
 
 \`\`\`html
-<ngx-md [content]="markdownContent" />
+<shikidown [content]="markdownContent" />
 \`\`\`
 
 Ou depuis une string directement dans le Markdown :
@@ -104,13 +104,13 @@ export class MonComposantComponent {
       <section class="space-y-4">
         <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Démarrage rapide</h2>
         <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 overflow-hidden">
-          <ngx-md [content]="heroMd" class="prose prose-slate dark:prose-invert max-w-none" />
+          <shikidown [content]="heroMd" class="prose prose-slate dark:prose-invert max-w-none" />
         </div>
       </section>
 
       <!-- Features table -->
       <section class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 overflow-hidden">
-        <ngx-md [content]="featuresMd" class="prose prose-slate dark:prose-invert max-w-none" />
+        <shikidown [content]="featuresMd" class="prose prose-slate dark:prose-invert max-w-none" />
       </section>
 
     </main>

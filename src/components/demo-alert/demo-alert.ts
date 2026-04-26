@@ -20,12 +20,14 @@ const ALERT_ICONS: Record<AlertType, string> = {
   selector: 'demo-alert',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div [class]="'flex items-start gap-3 rounded-lg border p-4 my-3 ' + styles()">
-      <span class="text-xl leading-none mt-0.5 shrink-0" [attr.aria-hidden]="true">{{ icon() }}</span>
-      <div class="min-w-0">
+    <div [class]="'flex flex-col items-start gap-3 rounded-lg border p-4 my-3 ' + styles()">
+      <div class="text-xl leading-none mt-0.5">
+        <span class="shrink-0" [attr.aria-hidden]="true">{{ icon() }}</span>
         @if (title()) {
-          <p class="font-semibold mb-1">{{ title() }}</p>
+          <span class="ms-2 font-semibold">{{ title() }}</span>
         }
+      </div>
+      <div class="min-w-0">
         <p class="text-sm leading-relaxed">{{ message() }}</p>
       </div>
     </div>
