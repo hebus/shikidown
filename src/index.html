@@ -1,11 +1,20 @@
 <!doctype html>
-<html lang="en">
+<html lang="fr">
 <head>
   <meta charset="utf-8">
-  <title>MarkdownShikiRenderer</title>
+  <title>ngx-md — Markdown + Angular Components</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Librairie Angular pour rendre du Markdown avec Shiki et des composants Angular embarqués">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <script>
+    // Applique le thème avant le premier paint pour éviter le flash
+    (function () {
+      const stored = localStorage.getItem('dark');
+      const prefersDark = stored === 'true' || (stored === null && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      if (prefersDark) document.documentElement.classList.add('dark');
+    })();
+  </script>
 </head>
 <body>
   <app-root></app-root>

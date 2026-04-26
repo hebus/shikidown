@@ -1,3 +1,74 @@
-/* You can add global styles to this file, and also import other style files */
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
-@import 'tailwindcss';
+/* Dark mode via classe .dark sur <html> */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ─── Shiki : support dual-theme (dark/light) ──────────────────────────── */
+
+/* Mode clair : Shiki applique ses styles directement en inline — rien à faire. */
+
+/* Mode sombre : on écrase les styles inline du thème clair avec les variables --shiki-dark-* */
+.dark .shiki {
+  background-color: var(--shiki-dark-bg) !important;
+}
+.dark .shiki span {
+  color: var(--shiki-dark) !important;
+  font-style: var(--shiki-dark-font-style) !important;
+  font-weight: var(--shiki-dark-font-weight) !important;
+  text-decoration: var(--shiki-dark-text-decoration) !important;
+}
+
+/* ─── Shiki : style du bloc de code ────────────────────────────────────── */
+
+.shiki {
+  border-radius: 0.5rem;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  font-size: 0.875rem;
+  line-height: 1.75;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* ─── Prose : empêcher Tailwind Typography d'écraser Shiki ─────────────── */
+
+.prose pre {
+  background-color: transparent !important;
+  margin: 0.25rem 0 !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+}
+
+.prose :where(pre):not(:where([class~=not-prose],[class~=not-prose] *)) {
+  background-color: transparent;
+  padding: 0;
+}
+
+.prose code {
+  background-color: transparent !important;
+  padding: 0 !important;
+  font-size: inherit !important;
+  font-weight: inherit !important;
+}
+
+.prose code::before,
+.prose code::after {
+  content: "" !important;
+}
+
+/* ─── Corrections Tailwind v4 pour custom elements ─────────────────────── */
+
+demo-counter, demo-alert, demo-badge {
+  display: block;
+}
+
+/* ─── Animations de chargement ──────────────────────────────────────────── */
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

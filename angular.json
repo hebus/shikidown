@@ -6,6 +6,29 @@
   },
   "newProjectRoot": "projects",
   "projects": {
+    "ngx-md": {
+      "projectType": "library",
+      "root": "projects/ngx-md",
+      "sourceRoot": "projects/ngx-md/src",
+      "prefix": "ngx",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "options": {
+            "project": "projects/ngx-md/ng-package.json"
+          },
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/ngx-md/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/ngx-md/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        }
+      }
+    },
     "markdown-shiki-renderer": {
       "projectType": "application",
       "schematics": {},
@@ -24,6 +47,12 @@
                 "input": "public"
               }
             ],
+            "optimization": {
+              "styles": {
+                "inlineCritical": true,
+                "minify": true
+              }
+            },
             "styles": [
               "src/styles.css"
             ]

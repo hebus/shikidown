@@ -1,0 +1,140 @@
+import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { MarkdownComponent } from 'ngx-md';
+
+const HERO_MARKDOWN = `
+# Markdown enrichi de composants Angular
+
+**ngx-md** transforme vos fichiers Markdown en expériences interactives.
+Associez la puissance de \`markdown-it\`, la beauté de \`shiki\` et la réactivité d'Angular 21.
+
+\`\`\`typescript
+// app.config.ts
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideMarkdown({
+      theme: { dark: 'github-dark', light: 'github-light' },
+      components: { 'mon-composant': MonComposantComponent },
+    }),
+  ],
+};
+\`\`\`
+
+Puis dans votre template :
+
+\`\`\`html
+<ngx-md [content]="markdownContent" />
+\`\`\`
+
+Ou depuis une string directement dans le Markdown :
+
+\`\`\`markdown
+<mon-composant titre="Bonjour !" couleur="blue"></mon-composant>
+\`\`\`
+`;
+
+const FEATURES_MARKDOWN = `
+## Fonctionnalités
+
+| Feature | Détail |
+|---------|--------|
+| \`markdown-it\` | Parsing complet CommonMark + extensions |
+| \`shiki\` v4 | Syntax highlighting multi-thème dark/light |
+| Angular Components | Embedding via \`createComponent()\` |
+| Signals | API 100% réactive avec \`resource()\` |
+| TailwindCSS v4 | Styling moderne et dark mode |
+| Pipe async | \`content \| markdown \| async\` |
+
+\`\`\`typescript
+// Composant embeddable minimal
+@Component({
+  selector: 'mon-composant',
+  template: \`<div>{{ titre() }}</div>\`,
+})
+export class MonComposantComponent {
+  readonly titre = input<string>('');
+}
+\`\`\`
+`;
+
+@Component({
+  selector: 'app-home',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [RouterLink, MarkdownComponent],
+  template: `
+    <main class="mx-auto max-w-4xl px-4 py-12 space-y-16">
+
+      <!-- Hero -->
+      <section class="text-center space-y-6">
+        <div class="inline-flex items-center gap-2 rounded-full border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/20 px-4 py-1.5 text-sm text-indigo-600 dark:text-indigo-400 font-medium">
+          ✨ Angular 21 · markdown-it · shiki v4 · TailwindCSS v4
+        </div>
+        <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-gray-900 dark:text-white leading-tight">
+          Markdown + Angular<br>
+          <span class="text-indigo-600 dark:text-indigo-400">dans le même rendu</span>
+        </h1>
+        <p class="max-w-2xl mx-auto text-lg text-gray-600 dark:text-gray-400 leading-relaxed">
+          Une librairie Angular pour rendre du Markdown avec coloration syntaxique Shiki
+          et y insérer n'importe quel composant Angular interactif.
+        </p>
+        <div class="flex flex-wrap justify-center gap-3">
+          <a
+            routerLink="/guide"
+            class="rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 text-sm font-semibold transition-colors shadow-sm"
+          >Démarrer →</a>
+          <a
+            routerLink="/playground"
+            class="rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 px-5 py-2.5 text-sm font-semibold transition-colors"
+          >Playground</a>
+        </div>
+      </section>
+
+      <!-- Feature cards -->
+      <section class="grid sm:grid-cols-3 gap-4">
+        @for (feature of features; track feature.title) {
+          <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 space-y-2">
+            <div class="text-2xl">{{ feature.icon }}</div>
+            <h3 class="font-semibold text-gray-900 dark:text-white">{{ feature.title }}</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400">{{ feature.desc }}</p>
+          </div>
+        }
+      </section>
+
+      <!-- Markdown rendered demo -->
+      <section class="space-y-4">
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Démarrage rapide</h2>
+        <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 overflow-hidden">
+          <ngx-md [content]="heroMd" class="prose prose-slate dark:prose-invert max-w-none" />
+        </div>
+      </section>
+
+      <!-- Features table -->
+      <section class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 overflow-hidden">
+        <ngx-md [content]="featuresMd" class="prose prose-slate dark:prose-invert max-w-none" />
+      </section>
+
+    </main>
+  `,
+})
+export class HomeComponent {
+  readonly heroMd = HERO_MARKDOWN;
+  readonly featuresMd = FEATURES_MARKDOWN;
+
+  readonly features = [
+    {
+      icon: '🎨',
+      title: 'Shiki v4 Highlighting',
+      desc: 'Coloration syntaxique de qualité IDE avec support dark/light automatique via CSS variables.',
+    },
+    {
+      icon: '⚡',
+      title: 'Composants Angular',
+      desc: 'Insertez vos composants par sélecteur CSS dans le Markdown. Ils sont instanciés dynamiquement.',
+    },
+    {
+      icon: '🔄',
+      title: 'API Signals',
+      desc: 'Rendu réactif via resource(), effect() et afterRender(). Compatible SSR.',
+    },
+  ];
+}
