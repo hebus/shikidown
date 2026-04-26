@@ -1,7 +1,9 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { MarkdownComponent } from 'shikidown';
+import { LanguageService } from '../../services/language.service';
 
-const GUIDE_MD = `
+const GUIDE_MD: Record<'fr' | 'en', string> = {
+  fr: `
 # Guide de la librairie shikidown
 
 ## Installation
@@ -45,7 +47,7 @@ export const appConfig: ApplicationConfig = {
 | \`theme\` | \`string \| { dark, light }\` | \`{ dark: 'github-dark', light: 'poimandres' }\` | Thème(s) Shiki |
 | \`languages\` | \`string[]\` | 17 langages courants | Langages à précharger |
 | \`components\` | \`Record<string, Type>\` | \`{}\` | Composants Angular embeddables |
-| \`plugins\` | \`Array<(md) => void>\` | \`[]\` | Plugins markdown-it |
+| \`plugins\` | \`Array<(md) => void>\` | \`[]\` | Plugins markdown-it supplémentaires |
 | \`markdownOptions\` | \`MarkdownItOptions\` | — | Options markdown-it (html, breaks…) |
 | \`incrementalRendering\` | \`boolean\` | \`false\` | Rendu par blocs avec cache |
 | \`blockCacheSize\` | \`number\` | \`256\` | Capacité du cache LRU de blocs |
@@ -69,8 +71,6 @@ export const appConfig: ApplicationConfig = {
 | \`components\` | \`Record<string, Type>\` | Composants supplémentaires locaux à ce composant |
 
 ### Passer des composants localement
-
-Des composants non déclarés dans \`provideMarkdown()\` peuvent être enregistrés directement :
 
 \`\`\`html
 <shikidown
@@ -152,6 +152,7 @@ Tout composant enregistré via \`provideMarkdown({ components })\` ou \`[compone
 \`\`\`
 
 **Exemples**
+
 <demo-counter initial-count="5" label="Compteur"></demo-counter>
 
 <demo-alert type="warning" title="Attention" message="Ceci est important !"></demo-alert>
@@ -161,9 +162,6 @@ de l'application. L'enregistrement est idempotent — \`customElements.define()\
 jamais appelé deux fois pour le même sélecteur.
 
 ### Passage d'attributs
-
-Les attributs HTML sont mappés automatiquement vers les inputs Angular.
-Le kebab-case est converti en camelCase par le navigateur :
 
 | Attribut HTML     | Input Angular    |
 |-------------------|------------------|
@@ -185,12 +183,10 @@ import { MarkdownService } from 'shikidown';
 export class MyService {
   private readonly md = inject(MarkdownService);
 
-  // Rendu complet (asynchrone — attend l'initialisation de Shiki)
   async render(markdown: string): Promise<string> {
     return this.md.parseAsync(markdown);
   }
 
-  // Rendu par blocs (mode incrémental)
   async renderBlocks(markdown: string): Promise<RenderedBlock[]> {
     return this.md.parseBlocksAsync(markdown);
   }
@@ -223,15 +219,11 @@ Ajoutez les classes **Tailwind Typography** sur l'élément hôte :
 
 ### Dark mode
 
-Configurez Tailwind v4 avec la variante \`dark\` basée sur la classe :
-
 \`\`\`css
-/* styles.css */
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Mode sombre Shiki — le mode clair est géré par les styles inline de Shiki */
 .dark .shiki { background-color: var(--shiki-dark-bg) !important; }
 .dark .shiki span {
   color: var(--shiki-dark) !important;
@@ -241,10 +233,9 @@ Configurez Tailwind v4 avec la variante \`dark\` basée sur la classe :
 }
 \`\`\`
 
-> **Pourquoi seulement le dark ?** Avec le dual-theme Shiki (\`themes: { dark, light }\`),
-> le thème clair est appliqué directement en \`style="color:#xyz"\` (valeur absolue).
-> Le thème sombre est stocké dans des variables CSS \`--shiki-dark-*\`. Il suffit donc
-> d'activer ces variables en mode sombre — ne jamais surcharger le mode clair.
+> **Pourquoi seulement le dark ?** Avec le dual-theme Shiki, le thème clair est appliqué en
+> \`style="color:#xyz"\` (valeur absolue). Le thème sombre est stocké dans des variables
+> \`--shiki-dark-*\`. Il suffit d'activer ces variables en mode sombre — ne jamais surcharger le mode clair.
 
 ---
 
@@ -258,7 +249,254 @@ import type {
   RenderedBlock,       // { hash: string; html: string }
 } from 'shikidown';
 \`\`\`
-`;
+`,
+
+  en: `
+# shikidown — Library Guide
+
+## Installation
+
+\`\`\`bash
+npm install shikidown
+\`\`\`
+
+## Configuration
+
+Call \`provideMarkdown()\` in your \`app.config.ts\`:
+
+\`\`\`typescript
+import { provideMarkdown } from 'shikidown';
+import { AlertComponent } from './components';
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideMarkdown({
+      // Single or dark/light Shiki theme
+      theme: { dark: 'github-dark', light: 'catppuccin-latte' },
+      // Shiki languages to preload (same intellisense as createHighlighter)
+      languages: ['typescript', 'javascript', 'html', 'css', 'bash'],
+      // Angular components available in Markdown (registered as Custom Elements)
+      components: {
+        'my-alert': AlertComponent,
+      },
+      // Incremental rendering: only changed blocks are re-parsed (default: false)
+      incrementalRendering: true,
+      // Max block cache size (default: 256)
+      blockCacheSize: 128,
+    }),
+  ],
+};
+\`\`\`
+
+### Configuration options
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| \`theme\` | \`string \| { dark, light }\` | \`{ dark: 'github-dark', light: 'poimandres' }\` | Shiki theme(s) |
+| \`languages\` | \`string[]\` | 17 common languages | Languages to preload |
+| \`components\` | \`Record<string, Type>\` | \`{}\` | Embeddable Angular components |
+| \`plugins\` | \`Array<(md) => void>\` | \`[]\` | Additional markdown-it plugins |
+| \`markdownOptions\` | \`MarkdownItOptions\` | — | markdown-it options (html, breaks…) |
+| \`incrementalRendering\` | \`boolean\` | \`false\` | Block-level rendering with cache |
+| \`blockCacheSize\` | \`number\` | \`256\` | LRU block cache capacity |
+
+---
+
+## \`<shikidown>\` Component
+
+\`\`\`html
+<shikidown
+  [content]="markdownString"
+  class="prose prose-slate dark:prose-invert max-w-none"
+/>
+\`\`\`
+
+### Inputs
+
+| Input | Type | Description |
+|-------|------|-------------|
+| \`content\` | \`string\` | Markdown text to render |
+| \`components\` | \`Record<string, Type>\` | Additional components local to this instance |
+
+### Passing components locally
+
+\`\`\`html
+<shikidown
+  [content]="markdownString"
+  [components]="{ 'local-badge': BadgeComponent }"
+/>
+\`\`\`
+
+---
+
+## \`markdown\` Pipe
+
+The pipe returns an \`Observable<SafeHtml>\` — use it with Angular's \`async\` pipe:
+
+\`\`\`html
+<div [innerHTML]="content | markdown | async"></div>
+\`\`\`
+
+Or with \`@let\` (Angular 18+):
+
+\`\`\`html
+@let html = content | markdown | async;
+@if (html) {
+  <div [innerHTML]="html"></div>
+}
+\`\`\`
+
+> The pipe does not support incremental rendering. Use \`MarkdownComponent\` for that feature.
+
+---
+
+## Incremental Rendering
+
+When \`incrementalRendering: true\`, \`MarkdownComponent\` splits the document into independent
+root blocks (paragraphs, headings, code blocks…), computes an FNV-1a hash for each block,
+and only calls Shiki for **blocks whose text has changed**.
+
+\`\`\`
+Keystroke → md.parse() → block grouping → FNV-1a hash
+                                               ↓
+                                    block in cache?
+                                    yes → HTML reused
+                                    no  → Shiki highlights + caches
+                                               ↓
+                             @for (track hash) → Angular preserves
+                             DOM nodes of unchanged blocks
+\`\`\`
+
+**What is preserved between keystrokes:**
+- Shiki HTML for unchanged code blocks (no re-highlighting)
+- DOM nodes for unchanged blocks (same \`SafeHtml\` reference → Angular skips \`innerHTML\` reassignment)
+- Internal state of Web Components in unchanged blocks (counters, forms…)
+
+To manually clear the cache (e.g. runtime Shiki theme change):
+
+\`\`\`typescript
+import { MarkdownService } from 'shikidown';
+
+readonly md = inject(MarkdownService);
+
+switchTheme(): void {
+  this.md.clearCache();
+}
+\`\`\`
+
+---
+
+## Embedding Angular Components
+
+Any component registered via \`provideMarkdown({ components })\` or \`[components]\` can be
+inserted in Markdown using its selector:
+
+\`\`\`markdown
+# My document
+
+<demo-counter initial-count="5" label="Counter"></demo-counter>
+
+<demo-alert type="warning" title="Warning" message="This is important!"></demo-alert>
+\`\`\`
+
+**Examples**
+
+<demo-counter initial-count="5" label="Counter"></demo-counter>
+
+<demo-alert type="warning" title="Warning" message="This is important!"></demo-alert>
+
+Components are registered as **Custom Elements** (\`@angular/elements\`) at application startup.
+Registration is idempotent — \`customElements.define()\` is never called twice for the same selector.
+
+### Attribute passing
+
+| HTML attribute    | Angular input    |
+|-------------------|------------------|
+| \`initial-count\`  | \`initialCount\`   |
+| \`label\`          | \`label\`          |
+| \`my-prop\`        | \`myProp\`         |
+
+> Declare numeric inputs with \`input(0, { transform: numberAttribute })\` for automatic coercion from the HTML string.
+
+---
+
+## MarkdownService API
+
+\`\`\`typescript
+import { MarkdownService } from 'shikidown';
+
+@Injectable()
+export class MyService {
+  private readonly md = inject(MarkdownService);
+
+  async render(markdown: string): Promise<string> {
+    return this.md.parseAsync(markdown);
+  }
+
+  async renderBlocks(markdown: string): Promise<RenderedBlock[]> {
+    return this.md.parseBlocksAsync(markdown);
+  }
+}
+\`\`\`
+
+### Methods
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| \`initialize()\` | \`Promise<void>\` | Force Shiki init (called automatically by other methods) |
+| \`parseAsync(content)\` | \`Promise<string>\` | Render Markdown → full HTML |
+| \`parse(content)\` | \`string\` | Synchronous render — requires prior \`initialize()\` |
+| \`parseBlocksAsync(content)\` | \`Promise<RenderedBlock[]>\` | Block-level render with LRU cache |
+| \`clearCache()\` | \`void\` | Clear the block cache (e.g. theme change) |
+
+---
+
+## Styles
+
+\`shikidown\` does not apply typography styles automatically.
+Add **Tailwind Typography** classes to the host element:
+
+\`\`\`html
+<shikidown
+  [content]="md"
+  class="prose prose-slate dark:prose-invert max-w-none"
+/>
+\`\`\`
+
+### Dark mode
+
+\`\`\`css
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@custom-variant dark (&:where(.dark, .dark *));
+
+.dark .shiki { background-color: var(--shiki-dark-bg) !important; }
+.dark .shiki span {
+  color: var(--shiki-dark) !important;
+  font-style: var(--shiki-dark-font-style) !important;
+  font-weight: var(--shiki-dark-font-weight) !important;
+  text-decoration: var(--shiki-dark-text-decoration) !important;
+}
+\`\`\`
+
+> **Why only dark?** With Shiki dual-theme (\`themes: { dark, light }\`), the light theme is applied
+> directly as \`style="color:#xyz"\` (absolute value). The dark theme is stored in \`--shiki-dark-*\`
+> CSS variables. You only need to activate these variables in dark mode — never override the light mode.
+
+---
+
+## Exported types
+
+\`\`\`typescript
+import type {
+  MarkdownConfig,      // provideMarkdown() options
+  MarkdownThemePair,   // { dark: string; light: string }
+  ParsedBlock,         // markdown-it block with hash, tokens and source
+  RenderedBlock,       // { hash: string; html: string }
+} from 'shikidown';
+\`\`\`
+`,
+};
 
 @Component({
   selector: 'app-guide',
@@ -267,7 +505,7 @@ import type {
   template: `
     <main class="mx-auto max-w-4xl px-4 py-12">
       <shikidown
-        [content]="guideMd"
+        [content]="guideMd()"
         class="prose prose-slate dark:prose-invert max-w-none
                prose-headings:font-bold prose-h1:text-3xl prose-h2:text-2xl prose-h2:border-b prose-h2:border-gray-200 dark:prose-h2:border-gray-800 prose-h2:pb-2"
       />
@@ -275,5 +513,6 @@ import type {
   `,
 })
 export class GuideComponent {
-  readonly guideMd = GUIDE_MD;
+  private readonly langService = inject(LanguageService);
+  readonly guideMd = computed(() => GUIDE_MD[this.langService.lang()]);
 }

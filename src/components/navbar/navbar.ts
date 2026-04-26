@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { DOCUMENT } from '@angular/common';
+import { LanguageService } from '../../services/language.service';
 
 @Component({
   selector: 'app-navbar',
@@ -12,14 +13,14 @@ import { DOCUMENT } from '@angular/common';
 
         <!-- Logo -->
         <a routerLink="/" class="flex items-center gap-2 font-bold text-gray-900 dark:text-white text-lg">
-          <span class="flex h-7 w-7 items-center justify-center rounded-md bg-indigo-600 text-white text-sm font-black">M</span>
+          <span class="flex h-7 w-7 items-center justify-center rounded-md bg-indigo-600 text-white text-sm font-black">S</span>
           <span>shikidown</span>
           <span class="hidden sm:inline text-xs font-normal text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-gray-700 rounded px-1.5 py-0.5">v1.0</span>
         </a>
 
         <!-- Links -->
         <ul class="hidden sm:flex items-center gap-1 text-sm">
-          @for (link of navLinks; track link.path) {
+          @for (link of navLinks(); track link.path) {
             <li>
               <a
                 [routerLink]="link.path"
@@ -33,6 +34,11 @@ import { DOCUMENT } from '@angular/common';
 
         <!-- Actions -->
         <div class="flex items-center gap-2">
+          <button
+            (click)="langService.toggle()"
+            class="flex h-8 items-center justify-center rounded-md px-2 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            [attr.aria-label]="langService.lang() === 'fr' ? 'Switch to English' : 'Passer en français'"
+          >{{ langService.lang() === 'fr' ? 'EN' : 'FR' }}</button>
           <button
             (click)="toggleDark()"
             class="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -54,13 +60,23 @@ import { DOCUMENT } from '@angular/common';
 })
 export class NavbarComponent {
   private readonly doc = inject(DOCUMENT);
+  readonly langService = inject(LanguageService);
 
-  readonly navLinks = [
-    { label: 'Accueil',    path: '/' },
-    { label: 'Guide',      path: '/guide' },
-    { label: 'Composants', path: '/components' },
-    { label: 'Playground', path: '/playground' },
-  ];
+  readonly navLinks = computed(() =>
+    this.langService.lang() === 'fr'
+      ? [
+          { label: 'Accueil',    path: '/' },
+          { label: 'Guide',      path: '/guide' },
+          { label: 'Composants', path: '/components' },
+          { label: 'Playground', path: '/playground' },
+        ]
+      : [
+          { label: 'Home',       path: '/' },
+          { label: 'Guide',      path: '/guide' },
+          { label: 'Components', path: '/components' },
+          { label: 'Playground', path: '/playground' },
+        ]
+  );
 
   readonly isDark = signal(false);
 
