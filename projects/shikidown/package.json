@@ -1,0 +1,19 @@
+{
+  "name": "shikidown",
+  "version": "0.0.1",
+  "peerDependencies": {
+    "@angular/common": ">=21.0.0",
+    "@angular/core": ">=21.0.0",
+    "markdown-it": ">=14.0.0",
+    "shiki": ">=4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "markdown-it": {
+      "optional": false
+    },
+    "shiki": {
+      "optional": false
+    }
+  },
+  "sideEffects": false
+}
