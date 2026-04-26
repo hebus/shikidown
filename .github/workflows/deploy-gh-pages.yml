@@ -29,9 +29,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build library
-        run: npm run build:lib
-
       - name: Build demo app
         run: npx ng build --configuration production --base-href /${{ github.event.repository.name }}/
 
