@@ -3,6 +3,9 @@
   "lib": {
     "entryFile": "src/public-api.ts"
   },
+  "assets": [
+    "README.md"
+  ],
   "dest": "../../dist/shikidown",
   "deleteDestPath": false
 }

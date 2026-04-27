@@ -5,6 +5,7 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
+    "prebuild:lib": "node -e \"require('fs').copyFileSync('README.md','projects/shikidown/README.md')\"",
     "build:lib": "ng build shikidown",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
