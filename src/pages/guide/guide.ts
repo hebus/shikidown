@@ -9,7 +9,8 @@ const GUIDE_MD: Record<'fr' | 'en', string> = {
 ## Installation
 
 \`\`\`bash
-npm install shikidown
+npm install shikidown shiki markdown-it
+npm install --save-dev @types/markdown-it
 \`\`\`
 
 ## Configuration
@@ -257,7 +258,8 @@ import type {
 ## Installation
 
 \`\`\`bash
-npm install shikidown
+npm install shikidown shiki markdown-it
+npm install --save-dev @types/markdown-it
 \`\`\`
 
 ## Configuration
