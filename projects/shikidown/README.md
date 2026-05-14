@@ -163,14 +163,14 @@ Components passed via `[components]` are registered idempotently — `customElem
 
 ## MarkdownPipe
 
-Returns an `Observable<SafeHtml>` — pipe it through Angular's `async`:
+Returns a `Signal<SafeHtml>` — call it as a function in the template:
 
 ```html
 <!-- Simple -->
-<div [innerHTML]="markdownString | markdown | async"></div>
+<div [innerHTML]="(markdownString | markdown)()"></div>
 
-<!-- With @let (Angular 18+) -->
-@let html = markdownString | markdown | async;
+<!-- With @let -->
+@let html = (markdownString | markdown)();
 @if (html) {
   <div [innerHTML]="html"></div>
 }
@@ -180,8 +180,8 @@ Returns an `Observable<SafeHtml>` — pipe it through Angular's `async`:
 import { MarkdownPipe } from 'shikidown';
 
 @Component({
-  imports: [MarkdownPipe, AsyncPipe],
-  template: `<div [innerHTML]="md | markdown | async"></div>`,
+  imports: [MarkdownPipe],
+  template: `<div [innerHTML]="(md | markdown)()"></div>`,
 })
 export class MyComponent {
   readonly md = '# Hello from the pipe';

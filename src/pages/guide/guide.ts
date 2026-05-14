@@ -84,20 +84,22 @@ export const appConfig: ApplicationConfig = {
 
 ## Pipe \`markdown\`
 
-Le pipe retourne un \`Observable<SafeHtml>\` — utilisez-le avec le pipe \`async\` :
+Le pipe retourne un \`Signal<SafeHtml>\` — appelez-le comme une fonction dans le template :
 
 \`\`\`html
-<div [innerHTML]="contenu | markdown | async"></div>
+<div [innerHTML]="(contenu | markdown)()"></div>
 \`\`\`
 
-Ou avec \`@let\` (Angular 18+) :
+Ou avec \`@let\` :
 
 \`\`\`html
-@let html = contenu | markdown | async;
+@let html = (contenu | markdown)();
 @if (html) {
   <div [innerHTML]="html"></div>
 }
 \`\`\`
+
+<demo-pipe></demo-pipe>
 
 > Le pipe ne supporte pas le rendu incrémental. Utilisez \`MarkdownComponent\` pour cette fonctionnalité.
 
@@ -333,20 +335,22 @@ export const appConfig: ApplicationConfig = {
 
 ## \`markdown\` Pipe
 
-The pipe returns an \`Observable<SafeHtml>\` — use it with Angular's \`async\` pipe:
+The pipe returns a \`Signal<SafeHtml>\` — call it as a function in the template:
 
 \`\`\`html
-<div [innerHTML]="content | markdown | async"></div>
+<div [innerHTML]="(content | markdown)()"></div>
 \`\`\`
 
-Or with \`@let\` (Angular 18+):
+Or with \`@let\`:
 
 \`\`\`html
-@let html = content | markdown | async;
+@let html = (content | markdown)();
 @if (html) {
   <div [innerHTML]="html"></div>
 }
 \`\`\`
+
+<demo-pipe></demo-pipe>
 
 > The pipe does not support incremental rendering. Use \`MarkdownComponent\` for that feature.
 

@@ -5,6 +5,7 @@ import { routes } from './app.routes';
 import { DemoCounterComponent } from '../components/demo-counter/demo-counter';
 import { DemoAlertComponent } from '../components/demo-alert/demo-alert';
 import { DemoBadgeComponent } from '../components/demo-badge/demo-badge';
+import { DemoPipeComponent } from '../components/demo-pipe/demo-pipe';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -18,6 +19,7 @@ export const appConfig: ApplicationConfig = {
         'demo-counter': DemoCounterComponent,
         'demo-alert':   DemoAlertComponent,
         'demo-badge':   DemoBadgeComponent,
+        'demo-pipe':    DemoPipeComponent,
       },
     }),
   ],
