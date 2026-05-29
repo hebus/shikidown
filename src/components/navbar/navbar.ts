@@ -47,7 +47,7 @@ import { LanguageService } from '../../services/language.service';
             @if (isDark()) { ☀️ } @else { 🌙 }
           </button>
           <a
-            href="https://github.com"
+            href="https://github.com/hebus/shikidown"
             target="_blank"
             rel="noopener"
             class="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
