@@ -4,6 +4,12 @@
 /* Dark mode via classe .dark sur <html> */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ─── Offset de scroll pour le header sticky ───────────────────────────── */
+
+:root {
+  scroll-padding-top: 5rem; /* navbar (3.5rem) + marge */
+}
+
 /* ─── Shiki : support dual-theme (dark/light) ──────────────────────────── */
 
 /* Mode clair : Shiki applique ses styles directement en inline — rien à faire. */

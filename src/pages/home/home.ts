@@ -75,6 +75,7 @@ const FEATURES_MD: Record<'fr' | 'en', string> = {
 | \`markdown-it\` | Parsing complet CommonMark + extensions |
 | \`shiki\` v4 | Syntax highlighting multi-thème dark/light |
 | Angular Components | Embedding via Custom Elements (\`@angular/elements\`) |
+| Plugins | Système natif de plugins \`markdown-it\` : KaTeX, Mermaid, footnotes… |
 | Signals | API 100% réactive avec \`resource()\` |
 | TailwindCSS v4 | Styling moderne et dark mode |
 | Pipe async | \`content \| markdown \| async\` |
@@ -98,6 +99,7 @@ export class MonComposantComponent {
 | \`markdown-it\` | Full CommonMark parsing + extensions |
 | \`shiki\` v4 | Multi-theme dark/light syntax highlighting |
 | Angular Components | Embedding via Custom Elements (\`@angular/elements\`) |
+| Plugins | Native \`markdown-it\` plugin system: KaTeX, Mermaid, footnotes… |
 | Signals | 100% reactive API with \`resource()\` |
 | TailwindCSS v4 | Modern styling and dark mode |
 | Async pipe | \`content \| markdown \| async\` |
@@ -120,11 +122,13 @@ const FEATURES_CARDS: Record<'fr' | 'en', Array<{ icon: string; title: string; d
     { icon: '🎨', title: 'Shiki v4 Highlighting', desc: 'Coloration syntaxique de qualité IDE avec support dark/light automatique via CSS variables.' },
     { icon: '⚡', title: 'Composants Angular', desc: 'Insérez vos composants par sélecteur CSS dans le Markdown. Ils sont instanciés dynamiquement.' },
     { icon: '🔄', title: 'Rendu incrémental', desc: 'Seuls les blocs modifiés sont re-parsés. Les Web Components conservent leur état entre les frappes.' },
+    { icon: '🔌', title: 'Plugins markdown-it', desc: 'Étendez le rendu avec n\'importe quel plugin : KaTeX pour LaTeX, Mermaid, footnotes, ancres…' },
   ],
   en: [
     { icon: '🎨', title: 'Shiki v4 Highlighting', desc: 'IDE-quality syntax highlighting with automatic dark/light support via CSS variables.' },
     { icon: '⚡', title: 'Angular Components', desc: 'Insert your components by CSS selector in Markdown. They are instantiated dynamically.' },
     { icon: '🔄', title: 'Incremental rendering', desc: 'Only changed blocks are re-parsed. Web Components preserve their state between keystrokes.' },
+    { icon: '🔌', title: 'markdown-it Plugins', desc: 'Extend rendering with any plugin: KaTeX for LaTeX, Mermaid, footnotes, heading anchors…' },
   ],
 };
 
@@ -166,7 +170,7 @@ const UI: Record<'fr' | 'en', { start: string; quickstart: string }> = {
       </section>
 
       <!-- Feature cards -->
-      <section class="grid sm:grid-cols-3 gap-4">
+      <section class="grid grid-cols-2 gap-4">
         @for (feature of features(); track feature.title) {
           <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 space-y-2">
             <div class="text-2xl">{{ feature.icon }}</div>

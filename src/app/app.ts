@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ViewportScroller } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
 import { NavbarComponent } from '../components/navbar/navbar';
 
@@ -13,4 +14,8 @@ import { NavbarComponent } from '../components/navbar/navbar';
     </div>
   `,
 })
-export class App {}
+export class App {
+  constructor() {
+    inject(ViewportScroller).setOffset([0, 80]);
+  }
+}

@@ -1,4 +1,5 @@
 import type { Type } from '@angular/core';
+import type MarkdownIt from 'markdown-it';
 import type { BundledLanguage, BundledTheme, StringLiteralUnion } from 'shiki';
 
 /** Paire de thèmes Shiki pour dark/light mode */
@@ -35,8 +36,19 @@ export interface MarkdownConfig {
   languages?: StringLiteralUnion<BundledLanguage>[];
   /** Composants Angular enregistrés par sélecteur CSS pour l'embedding dans le Markdown */
   components?: Record<string, Type<unknown>>;
-  /** Plugins markdown-it supplémentaires */
-  plugins?: Array<(md: unknown) => void>;
+  /**
+   * Plugins markdown-it supplémentaires, appliqués dans l'ordre de déclaration.
+   * Chaque plugin reçoit l'instance `MarkdownIt` et peut appeler `.use()` ou modifier les règles directement.
+   *
+   * @example
+   * ```typescript
+   * import markdownItAnchor from 'markdown-it-anchor';
+   * import markdownItFootnote from 'markdown-it-footnote';
+   *
+   * provideMarkdown({ plugins: [markdownItAnchor, markdownItFootnote] })
+   * ```
+   */
+  plugins?: Array<(md: MarkdownIt) => void>;
   /** Options markdown-it personnalisées, fusionnées avec les défauts */
   markdownOptions?: MarkdownItOptions;
   /**

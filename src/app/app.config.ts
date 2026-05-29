@@ -1,5 +1,5 @@
 import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
-import { provideRouter, withComponentInputBinding } from '@angular/router';
+import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
 import { provideMarkdown } from 'shikidown';
 import { routes } from './app.routes';
 import { DemoCounterComponent } from '../components/demo-counter/demo-counter';
@@ -10,7 +10,7 @@ import { DemoPipeComponent } from '../components/demo-pipe/demo-pipe';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideRouter(routes, withComponentInputBinding()),
+    provideRouter(routes, withComponentInputBinding(), withInMemoryScrolling({ anchorScrolling: 'enabled' })),
     provideMarkdown({
       theme: { dark: 'github-dark', light: "catppuccin-latte" },
       languages: ['angular-html', 'angular-ts', 'typescript', 'javascript', 'html', 'css', 'bash', 'json', 'markdown', 'python', 'rust'],

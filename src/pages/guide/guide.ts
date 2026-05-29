@@ -1,4 +1,6 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, afterNextRender, computed, inject, signal } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { MarkdownComponent } from 'shikidown';
 import { LanguageService } from '../../services/language.service';
 
@@ -52,6 +54,103 @@ export const appConfig: ApplicationConfig = {
 | \`markdownOptions\` | \`MarkdownItOptions\` | — | Options markdown-it (html, breaks…) |
 | \`incrementalRendering\` | \`boolean\` | \`false\` | Rendu par blocs avec cache |
 | \`blockCacheSize\` | \`number\` | \`256\` | Capacité du cache LRU de blocs |
+
+---
+
+## Plugins
+
+shikidown expose l'instance \`markdown-it\` complète à tout plugin suivant la signature \`(md: MarkdownIt) => void\`.
+Déclarez un tableau de plugins dans \`provideMarkdown()\` — ils sont appliqués dans l'ordre, une seule fois, juste avant le premier rendu.
+
+### Installer un plugin
+
+\`\`\`bash
+npm install markdown-it-anchor markdown-it-footnote
+\`\`\`
+
+\`\`\`typescript
+import { provideMarkdown } from 'shikidown';
+import markdownItAnchor from 'markdown-it-anchor';
+import markdownItFootnote from 'markdown-it-footnote';
+
+provideMarkdown({
+  plugins: [markdownItAnchor, markdownItFootnote],
+})
+\`\`\`
+
+### Plugins populaires
+
+| Fonctionnalité | Package |
+|----------------|---------|
+| Ancres sur les titres | [\`markdown-it-anchor\`](https://www.npmjs.com/package/markdown-it-anchor) |
+| Notes de bas de page | [\`markdown-it-footnote\`](https://www.npmjs.com/package/markdown-it-footnote) |
+| Listes de tâches | [\`markdown-it-task-lists\`](https://www.npmjs.com/package/markdown-it-task-lists) |
+| LaTeX via KaTeX | [\`@iktakahiro/markdown-it-katex\`](https://www.npmjs.com/package/@iktakahiro/markdown-it-katex) |
+| Diagrammes Mermaid | [\`markdown-it-mermaid\`](https://www.npmjs.com/package/markdown-it-mermaid) |
+| Texte surligné \`==…==\` | [\`markdown-it-mark\`](https://www.npmjs.com/package/markdown-it-mark) |
+
+### KaTeX — rendu LaTeX
+
+\`\`\`bash
+npm install @iktakahiro/markdown-it-katex katex
+\`\`\`
+
+\`\`\`typescript
+import markdownItKatex from '@iktakahiro/markdown-it-katex';
+
+provideMarkdown({ plugins: [markdownItKatex] })
+\`\`\`
+
+Ajoutez la feuille de style KaTeX dans \`index.html\` :
+
+\`\`\`html
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex/dist/katex.min.css" />
+\`\`\`
+
+Syntaxe dans le Markdown — formule inline : \`$E = mc^2$\` ou en bloc :
+
+\`\`\`latex
+$$
+a^2 + b^2 = c^2
+$$
+\`\`\`
+
+### Mermaid — diagrammes
+
+\`\`\`bash
+npm install markdown-it-mermaid
+\`\`\`
+
+\`\`\`typescript
+import markdownItMermaid from 'markdown-it-mermaid';
+
+provideMarkdown({ plugins: [markdownItMermaid] })
+\`\`\`
+
+Syntaxe dans le Markdown :
+
+\`\`\`mermaid
+graph TD
+  A[Début] --> B{Décision}
+  B -- Oui --> C[Continuer]
+  B -- Non --> D[Arrêter]
+\`\`\`
+
+### Plugin personnalisé
+
+Un plugin est une simple fonction qui reçoit l'instance \`MarkdownIt\` :
+
+\`\`\`typescript
+import type MarkdownIt from 'markdown-it';
+
+function monPlugin(md: MarkdownIt): void {
+  md.core.ruler.push('mark', (state) => {
+    // transformer les tokens ici
+  });
+}
+
+provideMarkdown({ plugins: [monPlugin] })
+\`\`\`
 
 ---
 
@@ -306,6 +405,103 @@ export const appConfig: ApplicationConfig = {
 
 ---
 
+## Plugins
+
+shikidown exposes the full \`markdown-it\` instance to any plugin following the \`(md: MarkdownIt) => void\` signature.
+Pass an array of plugins to \`provideMarkdown()\` — they are applied in order, once, just before the first render.
+
+### Installing a plugin
+
+\`\`\`bash
+npm install markdown-it-anchor markdown-it-footnote
+\`\`\`
+
+\`\`\`typescript
+import { provideMarkdown } from 'shikidown';
+import markdownItAnchor from 'markdown-it-anchor';
+import markdownItFootnote from 'markdown-it-footnote';
+
+provideMarkdown({
+  plugins: [markdownItAnchor, markdownItFootnote],
+})
+\`\`\`
+
+### Popular plugins
+
+| Feature | Package |
+|---------|---------|
+| Heading anchors | [\`markdown-it-anchor\`](https://www.npmjs.com/package/markdown-it-anchor) |
+| Footnotes | [\`markdown-it-footnote\`](https://www.npmjs.com/package/markdown-it-footnote) |
+| Task lists | [\`markdown-it-task-lists\`](https://www.npmjs.com/package/markdown-it-task-lists) |
+| LaTeX via KaTeX | [\`@iktakahiro/markdown-it-katex\`](https://www.npmjs.com/package/@iktakahiro/markdown-it-katex) |
+| Mermaid diagrams | [\`markdown-it-mermaid\`](https://www.npmjs.com/package/markdown-it-mermaid) |
+| Highlighted text \`==…==\` | [\`markdown-it-mark\`](https://www.npmjs.com/package/markdown-it-mark) |
+
+### KaTeX — LaTeX rendering
+
+\`\`\`bash
+npm install @iktakahiro/markdown-it-katex katex
+\`\`\`
+
+\`\`\`typescript
+import markdownItKatex from '@iktakahiro/markdown-it-katex';
+
+provideMarkdown({ plugins: [markdownItKatex] })
+\`\`\`
+
+Add the KaTeX stylesheet to your \`index.html\`:
+
+\`\`\`html
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex/dist/katex.min.css" />
+\`\`\`
+
+Markdown syntax — inline formula: \`$E = mc^2$\` or as a block:
+
+\`\`\`latex
+$$
+a^2 + b^2 = c^2
+$$
+\`\`\`
+
+### Mermaid — diagrams
+
+\`\`\`bash
+npm install markdown-it-mermaid
+\`\`\`
+
+\`\`\`typescript
+import markdownItMermaid from 'markdown-it-mermaid';
+
+provideMarkdown({ plugins: [markdownItMermaid] })
+\`\`\`
+
+Markdown syntax:
+
+\`\`\`mermaid
+graph TD
+  A[Start] --> B{Decision}
+  B -- Yes --> C[Continue]
+  B -- No  --> D[Stop]
+\`\`\`
+
+### Custom plugin
+
+A plugin is any function that receives the \`MarkdownIt\` instance:
+
+\`\`\`typescript
+import type MarkdownIt from 'markdown-it';
+
+function myPlugin(md: MarkdownIt): void {
+  md.core.ruler.push('mark', (state) => {
+    // transform tokens here
+  });
+}
+
+provideMarkdown({ plugins: [myPlugin] })
+\`\`\`
+
+---
+
 ## \`<shikidown>\` Component
 
 \`\`\`html
@@ -504,21 +700,129 @@ import type {
 `,
 };
 
+const SECTIONS: Record<'fr' | 'en', { label: string; id: string }[]> = {
+  fr: [
+    { label: 'Installation', id: 'installation' },
+    { label: 'Configuration', id: 'configuration' },
+    { label: 'Plugins', id: 'plugins' },
+    { label: 'Composant shikidown', id: 'composant' },
+    { label: 'Pipe markdown', id: 'pipe' },
+    { label: 'Rendu incrémental', id: 'incremental' },
+    { label: 'Composants Angular', id: 'embedding' },
+    { label: 'MarkdownService API', id: 'api' },
+    { label: 'Styles', id: 'styles' },
+    { label: 'Types exportés', id: 'types' },
+  ],
+  en: [
+    { label: 'Installation', id: 'installation' },
+    { label: 'Configuration', id: 'configuration' },
+    { label: 'Plugins', id: 'plugins' },
+    { label: 'shikidown Component', id: 'composant' },
+    { label: 'markdown Pipe', id: 'pipe' },
+    { label: 'Incremental Rendering', id: 'incremental' },
+    { label: 'Embedding Angular', id: 'embedding' },
+    { label: 'MarkdownService API', id: 'api' },
+    { label: 'Styles', id: 'styles' },
+    { label: 'Exported types', id: 'types' },
+  ],
+};
+
+const SECTION_IDS: Record<'fr' | 'en', string[]> = {
+  fr: ['installation', 'configuration', 'plugins', 'composant', 'pipe', 'incremental', 'embedding', 'api', 'styles', 'types'],
+  en: ['installation', 'configuration', 'plugins', 'composant', 'pipe', 'incremental', 'embedding', 'api', 'styles', 'types'],
+};
+
+function withAnchors(content: string, ids: string[]): string {
+  let i = 0;
+  return content.replace(/\n## /g, () => `\n<span id="${ids[i]}" data-section="${ids[i++]}"></span>\n\n## `);
+}
+
 @Component({
   selector: 'app-guide',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MarkdownComponent],
+  imports: [MarkdownComponent, RouterLink],
   template: `
-    <main class="mx-auto max-w-4xl px-4 py-12">
-      <shikidown
-        [content]="guideMd()"
-        class="prose prose-slate dark:prose-invert max-w-none
-               prose-headings:font-bold prose-h1:text-3xl prose-h2:text-2xl prose-h2:border-b prose-h2:border-gray-200 dark:prose-h2:border-gray-800 prose-h2:pb-2"
-      />
-    </main>
+    <div class="mx-auto max-w-6xl px-4 py-12 flex gap-8 items-start">
+
+      <!-- Sidebar -->
+      <nav
+        class="hidden lg:block w-52 shrink-0 sticky top-20"
+        [attr.aria-label]="lang() === 'fr' ? 'Navigation du guide' : 'Guide navigation'"
+      >
+        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2 px-3">
+          {{ lang() === 'fr' ? 'Sur cette page' : 'On this page' }}
+        </p>
+        <ul class="space-y-0.5" role="list">
+          @for (section of sections(); track section.id) {
+            <li>
+              <a
+                [routerLink]="[]"
+                [fragment]="section.id"
+                [class]="activeSection() === section.id ? activeClass : inactiveClass"
+                (click)="activeSection.set(section.id)"
+              >{{ section.label }}</a>
+            </li>
+          }
+        </ul>
+      </nav>
+
+      <!-- Content -->
+      <main class="flex-1 min-w-0">
+        <shikidown
+          [content]="guideMd()"
+          class="prose prose-slate dark:prose-invert max-w-none
+                 prose-headings:font-bold prose-h1:text-3xl prose-h2:text-2xl prose-h2:border-b prose-h2:border-gray-200 dark:prose-h2:border-gray-800 prose-h2:pb-2"
+        />
+      </main>
+
+    </div>
   `,
 })
 export class GuideComponent {
   private readonly langService = inject(LanguageService);
-  readonly guideMd = computed(() => GUIDE_MD[this.langService.lang()]);
+  private readonly doc = inject(DOCUMENT);
+  private readonly destroyRef = inject(DestroyRef);
+
+  readonly lang = this.langService.lang;
+  readonly sections = computed(() => SECTIONS[this.lang()]);
+  readonly activeSection = signal('installation');
+  readonly guideMd = computed(() => withAnchors(GUIDE_MD[this.lang()], SECTION_IDS[this.lang()]));
+
+  readonly activeClass = 'block px-3 py-1.5 text-sm rounded-md font-medium transition-colors text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20';
+  readonly inactiveClass = 'block px-3 py-1.5 text-sm rounded-md transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800';
+
+  constructor() {
+    const win = this.doc.defaultView;
+    if (win?.location.hash) {
+      const hash = win.location.hash.slice(1);
+      if (SECTION_IDS.fr.includes(hash)) this.activeSection.set(hash);
+    }
+
+    afterNextRender(() => {
+      const win = this.doc.defaultView;
+      if (!win) return;
+
+      const handler = () => {
+        const spans = Array.from(this.doc.querySelectorAll<HTMLElement>('span[data-section]'));
+        if (!spans.length) return;
+
+        const atBottom = win.scrollY + win.innerHeight >= this.doc.body.scrollHeight - 10;
+        if (atBottom) {
+          this.activeSection.set(spans[spans.length - 1].dataset['section'] ?? '');
+          return;
+        }
+
+        let active = spans[0].dataset['section'] ?? '';
+        for (const span of spans) {
+          if (span.getBoundingClientRect().top <= 96) {
+            active = span.dataset['section'] ?? '';
+          }
+        }
+        this.activeSection.set(active);
+      };
+
+      win.addEventListener('scroll', handler, { passive: true });
+      this.destroyRef.onDestroy(() => win.removeEventListener('scroll', handler));
+    });
+  }
 }
