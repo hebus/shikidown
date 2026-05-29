@@ -71,15 +71,15 @@ export class MarkdownService {
       const useDualTheme = themes.dark !== themes.light;
 
       highlightFn = (code: string, lang: string): string => {
-        const safeLang = loadedLangs.has(lang as never) ? lang : 'text';
+        if (!lang || !loadedLangs.has(lang as never)) return '';
         try {
           if (useDualTheme) {
             return hl.codeToHtml(code, {
-              lang: safeLang,
+              lang,
               themes: { dark: themes.dark, light: themes.light },
             });
           }
-          return hl.codeToHtml(code, { lang: safeLang, theme: themes.dark });
+          return hl.codeToHtml(code, { lang, theme: themes.dark });
         } catch {
           return `<pre class="shiki"><code>${escapeHtml(code)}</code></pre>`;
         }
@@ -97,6 +97,19 @@ export class MarkdownService {
     for (const plugin of this.config.plugins ?? []) {
       (plugin as (md: MarkdownIt) => void)(this.md);
     }
+
+    // Mermaid fence: output a <pre class="mermaid"> placeholder so mermaid.run()
+    // can render it client-side without Shiki interfering.
+    const originalFence = this.md.renderer.rules['fence']?.bind(this.md.renderer.rules);
+    this.md.renderer.rules['fence'] = (tokens, idx, options, env, self) => {
+      const token = tokens[idx];
+      if (token.info.trim() === 'mermaid') {
+        return `<pre class="mermaid" data-mermaid-src="${escapeHtml(token.content.trim())}">${token.content.trim()}</pre>`;
+      }
+      return originalFence
+        ? originalFence(tokens, idx, options, env, self)
+        : self.renderToken(tokens, idx, options);
+    };
   }
 
   // ─── API publique principale (inchangée) ──────────────────────────────────

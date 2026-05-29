@@ -59,6 +59,19 @@ demo-counter, demo-alert, demo-badge {
 }
 *::-webkit-scrollbar-thumb:hover { background-color: var(--scrollbar-thumb-hover); }
 
+/* ─── Mermaid : neutralise les styles prose sur le <pre> rendu ─────────── */
+
+.prose pre.mermaid {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  color: inherit;
+  font-size: inherit;
+  font-family: inherit;
+  overflow: visible;
+  box-shadow: none;
+}
+
 /* ─── Animations de chargement ──────────────────────────────────────────── */
 
 @keyframes pulse {

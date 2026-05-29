@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { afterEveryRender, ChangeDetectionStrategy, Component, computed, inject, PLATFORM_ID } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MarkdownComponent } from 'shikidown';
 import { LanguageService } from '../../services/language.service';
@@ -62,6 +63,58 @@ Or directly in Markdown:
 
 \`\`\`markdown
 <my-component title="Hello!" color="blue"></my-component>
+\`\`\`
+`,
+};
+
+const MERMAID_MD: Record<'fr' | 'en', string> = {
+  fr: `
+## Diagrammes Mermaid
+
+Écrivez un bloc **mermaid** dans votre Markdown :
+\`\`\`\`markdown
+\`\`\`mermaid
+graph TD
+  A[provideMarkdown] --> B{Plugin mermaid}
+  B -->|oui| C[SVG rendu]
+  B -->|non| D[bloc code brut]
+  C --> E[✨ Interactif]
+\`\`\`
+\`\`\`\`
+
+Et shikidown le rend directement en SVG :
+
+\`\`\`mermaid
+graph TD
+  A[provideMarkdown] --> B{Plugin mermaid}
+  B -->|oui| C[SVG rendu]
+  B -->|non| D[bloc code brut]
+  C --> E[✨ Interactif]
+\`\`\`
+`,
+  en: `
+## Mermaid Diagrams
+
+Write a \`\`\`mermaid\`\`\` block in your Markdown:
+
+\`\`\`\`markdown
+\`\`\`mermaid
+graph TD
+  A[provideMarkdown] --> B{Mermaid plugin}
+  B -->|yes| C[SVG rendered]
+  B -->|no| D[raw code block]
+  C --> E[✨ Interactive]
+\`\`\`
+\`\`\`\`
+
+And shikidown renders it directly as SVG:
+
+\`\`\`mermaid
+graph TD
+  A[provideMarkdown] --> B{Mermaid plugin}
+  B -->|yes| C[SVG rendered]
+  B -->|no| D[raw code block]
+  C --> E[✨ Interactive]
 \`\`\`
 `,
 };
@@ -188,6 +241,11 @@ const UI: Record<'fr' | 'en', { start: string; quickstart: string }> = {
         </div>
       </section>
 
+      <!-- Mermaid demo -->
+      <section class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 overflow-hidden">
+        <shikidown [content]="mermaidMd()" class="prose prose-slate dark:prose-invert max-w-none"/>
+      </section>
+
       <!-- Features table -->
       <section class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 overflow-hidden">
         <shikidown [content]="featuresMd()" class="prose prose-slate dark:prose-invert max-w-none" />
@@ -198,10 +256,35 @@ const UI: Record<'fr' | 'en', { start: string; quickstart: string }> = {
 })
 export class HomeComponent {
   private readonly langService = inject(LanguageService);
+  private readonly platformId = inject(PLATFORM_ID);
 
   readonly lang = this.langService.lang;
   readonly heroMd    = computed(() => HERO_MD[this.lang()]);
+  readonly mermaidMd  = computed(() => MERMAID_MD[this.lang()]);
   readonly featuresMd = computed(() => FEATURES_MD[this.lang()]);
   readonly features  = computed(() => FEATURES_CARDS[this.lang()]);
   readonly ui        = computed(() => UI[this.lang()]);
+
+  constructor() {
+    if (!isPlatformBrowser(this.platformId)) return;
+
+    const mermaidReady = import('mermaid').then(({ default: m }) => m);
+    let activeTheme = '';
+
+    afterEveryRender(() => {
+      const theme = document.documentElement.classList.contains('dark') ? 'dark' : 'default';
+      mermaidReady.then(m => {
+        if (theme !== activeTheme) {
+          activeTheme = theme;
+          m.initialize({ startOnLoad: false, securityLevel: 'loose', theme });
+          document.querySelectorAll<HTMLElement>('pre.mermaid[data-processed]').forEach(el => {
+            const src = el.getAttribute('data-mermaid-src');
+            if (src) el.textContent = src;
+            el.removeAttribute('data-processed');
+          });
+        }
+        m.run({ querySelector: '.mermaid' });
+      });
+    });
+  }
 }

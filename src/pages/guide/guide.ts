@@ -1,5 +1,5 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, afterNextRender, computed, inject, signal } from '@angular/core';
-import { DOCUMENT } from '@angular/common';
+import { ChangeDetectionStrategy, Component, DestroyRef, afterEveryRender, afterNextRender, computed, inject, PLATFORM_ID, signal } from '@angular/core';
+import { DOCUMENT, isPlatformBrowser } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MarkdownComponent } from 'shikidown';
 import { LanguageService } from '../../services/language.service';
@@ -85,18 +85,18 @@ provideMarkdown({
 | Ancres sur les titres | [\`markdown-it-anchor\`](https://www.npmjs.com/package/markdown-it-anchor) |
 | Notes de bas de page | [\`markdown-it-footnote\`](https://www.npmjs.com/package/markdown-it-footnote) |
 | Listes de tâches | [\`markdown-it-task-lists\`](https://www.npmjs.com/package/markdown-it-task-lists) |
-| LaTeX via KaTeX | [\`@iktakahiro/markdown-it-katex\`](https://www.npmjs.com/package/@iktakahiro/markdown-it-katex) |
-| Diagrammes Mermaid | [\`markdown-it-mermaid\`](https://www.npmjs.com/package/markdown-it-mermaid) |
+| LaTeX via KaTeX | [\`@vscode/markdown-it-katex\`](https://www.npmjs.com/package/@vscode/markdown-it-katex) |
+| Diagrammes Mermaid | [\`mermaid\`](https://www.npmjs.com/package/mermaid) — support natif (voir ci-dessous) |
 | Texte surligné \`==…==\` | [\`markdown-it-mark\`](https://www.npmjs.com/package/markdown-it-mark) |
 
 ### KaTeX — rendu LaTeX
 
 \`\`\`bash
-npm install @iktakahiro/markdown-it-katex katex
+npm install @vscode/markdown-it-katex
 \`\`\`
 
 \`\`\`typescript
-import markdownItKatex from '@iktakahiro/markdown-it-katex';
+import markdownItKatex from '@vscode/markdown-it-katex';
 
 provideMarkdown({ plugins: [markdownItKatex] })
 \`\`\`
@@ -107,24 +107,58 @@ Ajoutez la feuille de style KaTeX dans \`index.html\` :
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex/dist/katex.min.css" />
 \`\`\`
 
-Syntaxe dans le Markdown — formule inline : \`$E = mc^2$\` ou en bloc :
+Syntaxe dans le Markdown — formule inline avec \`$...$\` ou en bloc avec \`$$...$$\` :
 
-\`\`\`latex
+**Inline :** $E = mc^2$ — énergie-masse
+
+**Bloc :**
+
+$$
+\int_{-\infty}^{+\infty} e^{-x^2}\,dx = \sqrt{\pi}
+$$
+
 $$
 a^2 + b^2 = c^2
 $$
-\`\`\`
 
 ### Mermaid — diagrammes
 
+shikidown gère nativement les blocs \`\`\`mermaid\`\`\` — aucun plugin nécessaire.
+Il émet un \`<pre class="mermaid" data-mermaid-src="...">\` que vous activez côté client avec \`mermaid.run()\`.
+
 \`\`\`bash
-npm install markdown-it-mermaid
+npm install mermaid
 \`\`\`
 
-\`\`\`typescript
-import markdownItMermaid from 'markdown-it-mermaid';
+Dans le composant qui affiche le Markdown, utilisez \`afterEveryRender\` pour appeler \`mermaid.run()\` après chaque cycle de rendu Angular.
+Le thème dark/light est détecté automatiquement via la classe \`.dark\` sur \`<html>\` :
 
-provideMarkdown({ plugins: [markdownItMermaid] })
+\`\`\`typescript
+import { afterEveryRender, inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+
+constructor() {
+  if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
+
+  const mermaidReady = import('mermaid').then(({ default: m }) => m);
+  let activeTheme = '';
+
+  afterEveryRender(() => {
+    const theme = document.documentElement.classList.contains('dark') ? 'dark' : 'default';
+    mermaidReady.then(m => {
+      if (theme !== activeTheme) {
+        activeTheme = theme;
+        m.initialize({ startOnLoad: false, securityLevel: 'loose', theme });
+        document.querySelectorAll<HTMLElement>('pre.mermaid[data-processed]').forEach(el => {
+          const src = el.getAttribute('data-mermaid-src');
+          if (src) el.textContent = src;
+          el.removeAttribute('data-processed');
+        });
+      }
+      m.run({ querySelector: '.mermaid' });
+    });
+  });
+}
 \`\`\`
 
 Syntaxe dans le Markdown :
@@ -433,18 +467,18 @@ provideMarkdown({
 | Heading anchors | [\`markdown-it-anchor\`](https://www.npmjs.com/package/markdown-it-anchor) |
 | Footnotes | [\`markdown-it-footnote\`](https://www.npmjs.com/package/markdown-it-footnote) |
 | Task lists | [\`markdown-it-task-lists\`](https://www.npmjs.com/package/markdown-it-task-lists) |
-| LaTeX via KaTeX | [\`@iktakahiro/markdown-it-katex\`](https://www.npmjs.com/package/@iktakahiro/markdown-it-katex) |
-| Mermaid diagrams | [\`markdown-it-mermaid\`](https://www.npmjs.com/package/markdown-it-mermaid) |
+| LaTeX via KaTeX | [\`@vscode/markdown-it-katex\`](https://www.npmjs.com/package/@vscode/markdown-it-katex) |
+| Mermaid diagrams | [\`mermaid\`](https://www.npmjs.com/package/mermaid) — built-in support (see below) |
 | Highlighted text \`==…==\` | [\`markdown-it-mark\`](https://www.npmjs.com/package/markdown-it-mark) |
 
 ### KaTeX — LaTeX rendering
 
 \`\`\`bash
-npm install @iktakahiro/markdown-it-katex katex
+npm install @vscode/markdown-it-katex
 \`\`\`
 
 \`\`\`typescript
-import markdownItKatex from '@iktakahiro/markdown-it-katex';
+import markdownItKatex from '@vscode/markdown-it-katex';
 
 provideMarkdown({ plugins: [markdownItKatex] })
 \`\`\`
@@ -455,24 +489,58 @@ Add the KaTeX stylesheet to your \`index.html\`:
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex/dist/katex.min.css" />
 \`\`\`
 
-Markdown syntax — inline formula: \`$E = mc^2$\` or as a block:
+Markdown syntax — inline with \`$...$\` or block with \`$$...$$\`:
 
-\`\`\`latex
+**Inline:** $E = mc^2$ — mass-energy equivalence
+
+**Block:**
+
+$$
+\int_{-\infty}^{+\infty} e^{-x^2}\,dx = \sqrt{\pi}
+$$
+
 $$
 a^2 + b^2 = c^2
 $$
-\`\`\`
 
 ### Mermaid — diagrams
 
+shikidown natively handles \`\`\`mermaid\`\`\` blocks — no plugin required.
+It emits a \`<pre class="mermaid" data-mermaid-src="...">\` that you activate client-side with \`mermaid.run()\`.
+
 \`\`\`bash
-npm install markdown-it-mermaid
+npm install mermaid
 \`\`\`
 
-\`\`\`typescript
-import markdownItMermaid from 'markdown-it-mermaid';
+In the component that displays Markdown, use \`afterEveryRender\` to call \`mermaid.run()\` after every Angular render cycle.
+Dark/light theme is detected automatically via the \`.dark\` class on \`<html>\`:
 
-provideMarkdown({ plugins: [markdownItMermaid] })
+\`\`\`typescript
+import { afterEveryRender, inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+
+constructor() {
+  if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
+
+  const mermaidReady = import('mermaid').then(({ default: m }) => m);
+  let activeTheme = '';
+
+  afterEveryRender(() => {
+    const theme = document.documentElement.classList.contains('dark') ? 'dark' : 'default';
+    mermaidReady.then(m => {
+      if (theme !== activeTheme) {
+        activeTheme = theme;
+        m.initialize({ startOnLoad: false, securityLevel: 'loose', theme });
+        document.querySelectorAll<HTMLElement>('pre.mermaid[data-processed]').forEach(el => {
+          const src = el.getAttribute('data-mermaid-src');
+          if (src) el.textContent = src;
+          el.removeAttribute('data-processed');
+        });
+      }
+      m.run({ querySelector: '.mermaid' });
+    });
+  });
+}
 \`\`\`
 
 Markdown syntax:
@@ -782,6 +850,7 @@ export class GuideComponent {
   private readonly langService = inject(LanguageService);
   private readonly doc = inject(DOCUMENT);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly platformId = inject(PLATFORM_ID);
 
   readonly lang = this.langService.lang;
   readonly sections = computed(() => SECTIONS[this.lang()]);
@@ -792,6 +861,27 @@ export class GuideComponent {
   readonly inactiveClass = 'block px-3 py-1.5 text-sm rounded-md transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800';
 
   constructor() {
+    if (isPlatformBrowser(this.platformId)) {
+      const mermaidReady = import('mermaid').then(({ default: m }) => m);
+      let activeTheme = '';
+
+      afterEveryRender(() => {
+        const theme = this.doc.documentElement.classList.contains('dark') ? 'dark' : 'default';
+        mermaidReady.then(m => {
+          if (theme !== activeTheme) {
+            activeTheme = theme;
+            m.initialize({ startOnLoad: false, securityLevel: 'loose', theme });
+            this.doc.querySelectorAll<HTMLElement>('pre.mermaid[data-processed]').forEach(el => {
+              const src = el.getAttribute('data-mermaid-src');
+              if (src) el.textContent = src;
+              el.removeAttribute('data-processed');
+            });
+          }
+          m.run({ querySelector: '.mermaid' });
+        });
+      });
+    }
+
     const win = this.doc.defaultView;
     if (win?.location.hash) {
       const hash = win.location.hash.slice(1);

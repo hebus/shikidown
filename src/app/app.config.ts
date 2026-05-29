@@ -2,6 +2,7 @@ import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/
 import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
 import { provideMarkdown } from 'shikidown';
 import { copyCodePlugin } from './copy-code.plugin';
+import markdownItKatex from '@vscode/markdown-it-katex';
 import { routes } from './app.routes';
 import { DemoCounterComponent } from '../components/demo-counter/demo-counter';
 import { DemoAlertComponent } from '../components/demo-alert/demo-alert';
@@ -13,7 +14,7 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes, withComponentInputBinding(), withInMemoryScrolling({ anchorScrolling: 'enabled' })),
     provideMarkdown({
-      plugins: [copyCodePlugin],
+      plugins: [copyCodePlugin, markdownItKatex],
       theme: { dark: 'github-dark', light: "catppuccin-latte" },
       languages: ['angular-html', 'angular-ts', 'typescript', 'javascript', 'html', 'css', 'bash', 'json', 'markdown', 'python', 'rust'],
       incrementalRendering: true,
