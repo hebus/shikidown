@@ -1,6 +1,10 @@
 {
   "name": "markdown-shiki-renderer",
   "version": "0.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hebus/shikidown.git"
+  },
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
