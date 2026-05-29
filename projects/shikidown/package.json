@@ -1,6 +1,11 @@
 {
   "name": "shikidown",
   "version": "1.1.0",
+  "homepage": "https://hebus.github.io/shikidown/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hebus/shikidown.git"
+  },
   "peerDependencies": {
     "@angular/common": ">=21.0.0",
     "@angular/core": ">=21.0.0",
