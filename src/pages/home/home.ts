@@ -1,7 +1,6 @@
-import { isPlatformBrowser } from '@angular/common';
-import { afterEveryRender, ChangeDetectionStrategy, Component, computed, inject, PLATFORM_ID } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { MarkdownComponent } from 'shikidown';
+import { MarkdownComponent, MermaidDirective } from 'shikidown';
 import { LanguageService } from '../../services/language.service';
 
 const HERO_MD: Record<'fr' | 'en', string> = {
@@ -193,7 +192,7 @@ const UI: Record<'fr' | 'en', { start: string; quickstart: string }> = {
 @Component({
   selector: 'app-home',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, MarkdownComponent],
+  imports: [RouterLink, MarkdownComponent, MermaidDirective],
   template: `
     <main class="mx-auto max-w-4xl px-4 py-12 space-y-16">
 
@@ -243,7 +242,7 @@ const UI: Record<'fr' | 'en', { start: string; quickstart: string }> = {
 
       <!-- Mermaid demo -->
       <section class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 overflow-hidden">
-        <shikidown [content]="mermaidMd()" class="prose prose-slate dark:prose-invert max-w-none"/>
+        <shikidown mermaid [content]="mermaidMd()" class="prose prose-slate dark:prose-invert max-w-none"/>
       </section>
 
       <!-- Features table -->
@@ -256,7 +255,6 @@ const UI: Record<'fr' | 'en', { start: string; quickstart: string }> = {
 })
 export class HomeComponent {
   private readonly langService = inject(LanguageService);
-  private readonly platformId = inject(PLATFORM_ID);
 
   readonly lang = this.langService.lang;
   readonly heroMd    = computed(() => HERO_MD[this.lang()]);
@@ -264,27 +262,4 @@ export class HomeComponent {
   readonly featuresMd = computed(() => FEATURES_MD[this.lang()]);
   readonly features  = computed(() => FEATURES_CARDS[this.lang()]);
   readonly ui        = computed(() => UI[this.lang()]);
-
-  constructor() {
-    if (!isPlatformBrowser(this.platformId)) return;
-
-    const mermaidReady = import('mermaid').then(({ default: m }) => m);
-    let activeTheme = '';
-
-    afterEveryRender(() => {
-      const theme = document.documentElement.classList.contains('dark') ? 'dark' : 'default';
-      mermaidReady.then(m => {
-        if (theme !== activeTheme) {
-          activeTheme = theme;
-          m.initialize({ startOnLoad: false, securityLevel: 'loose', theme });
-          document.querySelectorAll<HTMLElement>('pre.mermaid[data-processed]').forEach(el => {
-            const src = el.getAttribute('data-mermaid-src');
-            if (src) el.textContent = src;
-            el.removeAttribute('data-processed');
-          });
-        }
-        m.run({ querySelector: '.mermaid' });
-      });
-    });
-  }
 }

@@ -1,7 +1,7 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, afterEveryRender, afterNextRender, computed, inject, PLATFORM_ID, signal } from '@angular/core';
-import { DOCUMENT, isPlatformBrowser } from '@angular/common';
+import { ChangeDetectionStrategy, Component, DestroyRef, afterNextRender, computed, inject, signal } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { MarkdownComponent } from 'shikidown';
+import { MarkdownComponent, MermaidDirective } from 'shikidown';
 import { LanguageService } from '../../services/language.service';
 
 const GUIDE_MD: Record<'fr' | 'en', string> = {
@@ -124,42 +124,32 @@ $$
 ### Mermaid — diagrammes
 
 shikidown gère nativement les blocs \`\`\`mermaid\`\`\` — aucun plugin nécessaire.
-Il émet un \`<pre class="mermaid" data-mermaid-src="...">\` que vous activez côté client avec \`mermaid.run()\`.
+Il émet un \`<pre class="mermaid" data-mermaid-src="...">\` que la directive \`mermaid\` active côté client.
+
+\`mermaid\` est une *peer dependency optionnelle* : installez-la uniquement si vous utilisez des diagrammes.
 
 \`\`\`bash
 npm install mermaid
 \`\`\`
 
-Dans le composant qui affiche le Markdown, utilisez \`afterEveryRender\` pour appeler \`mermaid.run()\` après chaque cycle de rendu Angular.
-Le thème dark/light est détecté automatiquement via la classe \`.dark\` sur \`<html>\` :
+Pour optimiser le rendu, **utilisez la directive \`mermaid\`** fournie par shikidown : posez-la directement sur l'élément \`<shikidown>\`.
+Plutôt que de relancer \`mermaid.run()\` à chaque cycle de rendu, elle est pilotée par événement (elle observe l'arrivée de nouveaux diagrammes et le changement de thème) et scopée à son hôte. Le thème dark/light est détecté automatiquement via la classe \`.dark\` sur \`<html>\` :
 
 \`\`\`typescript
-import { afterEveryRender, inject, PLATFORM_ID } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { MarkdownComponent, MermaidDirective } from 'shikidown';
 
-constructor() {
-  if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
-
-  const mermaidReady = import('mermaid').then(({ default: m }) => m);
-  let activeTheme = '';
-
-  afterEveryRender(() => {
-    const theme = document.documentElement.classList.contains('dark') ? 'dark' : 'default';
-    mermaidReady.then(m => {
-      if (theme !== activeTheme) {
-        activeTheme = theme;
-        m.initialize({ startOnLoad: false, securityLevel: 'loose', theme });
-        document.querySelectorAll<HTMLElement>('pre.mermaid[data-processed]').forEach(el => {
-          const src = el.getAttribute('data-mermaid-src');
-          if (src) el.textContent = src;
-          el.removeAttribute('data-processed');
-        });
-      }
-      m.run({ querySelector: '.mermaid' });
-    });
-  });
+@Component({
+  selector: 'app-docs',
+  imports: [MarkdownComponent, MermaidDirective],
+  template: \`<shikidown mermaid [content]="markdown" />\`,
+})
+export class DocsComponent {
+  readonly markdown = '...';
 }
 \`\`\`
+
+> Sans la directive, les blocs \`mermaid\` restent affichés en code brut.
+> \`mermaid\` n'est chargée (\`import('mermaid')\`) que lorsque la directive est réellement utilisée.
 
 Syntaxe dans le Markdown :
 
@@ -506,42 +496,32 @@ $$
 ### Mermaid — diagrams
 
 shikidown natively handles \`\`\`mermaid\`\`\` blocks — no plugin required.
-It emits a \`<pre class="mermaid" data-mermaid-src="...">\` that you activate client-side with \`mermaid.run()\`.
+It emits a \`<pre class="mermaid" data-mermaid-src="...">\` that the \`mermaid\` directive activates client-side.
+
+\`mermaid\` is an *optional peer dependency*: install it only if you use diagrams.
 
 \`\`\`bash
 npm install mermaid
 \`\`\`
 
-In the component that displays Markdown, use \`afterEveryRender\` to call \`mermaid.run()\` after every Angular render cycle.
-Dark/light theme is detected automatically via the \`.dark\` class on \`<html>\`:
+To optimize rendering, **use the \`mermaid\` directive** shipped with shikidown: place it directly on the \`<shikidown>\` element.
+Instead of re-running \`mermaid.run()\` on every render cycle, it is event-driven (it watches for newly inserted diagrams and theme changes) and scoped to its host. Dark/light theme is detected automatically via the \`.dark\` class on \`<html>\`:
 
 \`\`\`typescript
-import { afterEveryRender, inject, PLATFORM_ID } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { MarkdownComponent, MermaidDirective } from 'shikidown';
 
-constructor() {
-  if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
-
-  const mermaidReady = import('mermaid').then(({ default: m }) => m);
-  let activeTheme = '';
-
-  afterEveryRender(() => {
-    const theme = document.documentElement.classList.contains('dark') ? 'dark' : 'default';
-    mermaidReady.then(m => {
-      if (theme !== activeTheme) {
-        activeTheme = theme;
-        m.initialize({ startOnLoad: false, securityLevel: 'loose', theme });
-        document.querySelectorAll<HTMLElement>('pre.mermaid[data-processed]').forEach(el => {
-          const src = el.getAttribute('data-mermaid-src');
-          if (src) el.textContent = src;
-          el.removeAttribute('data-processed');
-        });
-      }
-      m.run({ querySelector: '.mermaid' });
-    });
-  });
+@Component({
+  selector: 'app-docs',
+  imports: [MarkdownComponent, MermaidDirective],
+  template: \`<shikidown mermaid [content]="markdown" />\`,
+})
+export class DocsComponent {
+  readonly markdown = '...';
 }
 \`\`\`
+
+> Without the directive, \`mermaid\` blocks stay rendered as raw code.
+> \`mermaid\` is only loaded (\`import('mermaid')\`) when the directive is actually used.
 
 Markdown syntax:
 
@@ -808,7 +788,7 @@ function withAnchors(content: string, ids: string[]): string {
 @Component({
   selector: 'app-guide',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MarkdownComponent, RouterLink],
+  imports: [MarkdownComponent, MermaidDirective, RouterLink],
   template: `
     <div class="mx-auto max-w-6xl px-4 py-12 flex gap-8 items-start">
 
@@ -837,6 +817,7 @@ function withAnchors(content: string, ids: string[]): string {
       <!-- Content -->
       <main class="flex-1 min-w-0">
         <shikidown
+          mermaid
           [content]="guideMd()"
           class="prose prose-slate dark:prose-invert max-w-none
                  prose-headings:font-bold prose-h1:text-3xl prose-h2:text-2xl prose-h2:border-b prose-h2:border-gray-200 dark:prose-h2:border-gray-800 prose-h2:pb-2"
@@ -850,7 +831,6 @@ export class GuideComponent {
   private readonly langService = inject(LanguageService);
   private readonly doc = inject(DOCUMENT);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly platformId = inject(PLATFORM_ID);
 
   readonly lang = this.langService.lang;
   readonly sections = computed(() => SECTIONS[this.lang()]);
@@ -861,27 +841,6 @@ export class GuideComponent {
   readonly inactiveClass = 'block px-3 py-1.5 text-sm rounded-md transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800';
 
   constructor() {
-    if (isPlatformBrowser(this.platformId)) {
-      const mermaidReady = import('mermaid').then(({ default: m }) => m);
-      let activeTheme = '';
-
-      afterEveryRender(() => {
-        const theme = this.doc.documentElement.classList.contains('dark') ? 'dark' : 'default';
-        mermaidReady.then(m => {
-          if (theme !== activeTheme) {
-            activeTheme = theme;
-            m.initialize({ startOnLoad: false, securityLevel: 'loose', theme });
-            this.doc.querySelectorAll<HTMLElement>('pre.mermaid[data-processed]').forEach(el => {
-              const src = el.getAttribute('data-mermaid-src');
-              if (src) el.textContent = src;
-              el.removeAttribute('data-processed');
-            });
-          }
-          m.run({ querySelector: '.mermaid' });
-        });
-      });
-    }
-
     const win = this.doc.defaultView;
     if (win?.location.hash) {
       const hash = win.location.hash.slice(1);
