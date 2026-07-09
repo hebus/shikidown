@@ -14,7 +14,8 @@
     "target": "ES2022",
     "module": "preserve",
     "paths": {
-      "shikidown": ["projects/shikidown/src/public-api.ts"]
+      "shikidown": ["projects/shikidown/src/public-api.ts"],
+      "shikidown/mermaid": ["projects/shikidown/mermaid/src/public-api.ts"]
     }
   },
   "angularCompilerOptions": {

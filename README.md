@@ -27,6 +27,7 @@
 - [MarkdownPipe](#markdownpipe)
 - [Embedding Angular components](#embedding-angular-components)
 - [Incremental rendering](#incremental-rendering)
+- [Mermaid diagrams](#mermaid-diagrams)
 - [MarkdownService API](#markdownservice-api)
 - [Styles & dark mode](#styles--dark-mode)
 - [Exported types](#exported-types)
@@ -49,6 +50,11 @@ npm install --save-dev @types/markdown-it
 | `@angular/elements` | `^21.0.0` |
 | `markdown-it` | `^14.0.0` |
 | `shiki` | `^4.0.0` |
+
+> **Optional:** `mermaid` (`>=11`) is an *optional* peer dependency. Install it **only** if you
+> render diagrams — see [Mermaid diagrams](#mermaid-diagrams). It is loaded exclusively through
+> the `shikidown/mermaid` entry point, so consumers who don't use it never pull `mermaid` into
+> their bundle.
 
 ---
 
@@ -304,6 +310,47 @@ export class ThemeSwitcher {
 
 ---
 
+## Mermaid diagrams
+
+shikidown handles ` ```mermaid ` fenced blocks natively — **no markdown-it plugin required**.
+The `MarkdownService` emits a `<pre class="mermaid" data-mermaid-src="…">` placeholder instead of
+syntax-highlighting the fence, and the **`MermaidDirective`** renders those placeholders to SVG
+client-side.
+
+Because `mermaid` is heavy and optional, it lives in its own entry point — **`shikidown/mermaid`**
+— and `mermaid` itself is an *optional* peer dependency. If you never import from
+`shikidown/mermaid`, `mermaid` never enters your dependency graph.
+
+**1. Install `mermaid`:**
+
+```bash
+npm install mermaid
+```
+
+**2. Import the directive from the `shikidown/mermaid` entry point and place it on `<shikidown>`:**
+
+```typescript
+import { MarkdownComponent } from 'shikidown';
+import { MermaidDirective } from 'shikidown/mermaid';
+
+@Component({
+  selector: 'app-docs',
+  imports: [MarkdownComponent, MermaidDirective],
+  template: `<shikidown mermaid [content]="markdown" />`,
+})
+export class DocsComponent {
+  readonly markdown = '```mermaid\ngraph TD\n  A[Start] --> B{Choice}\n```';
+}
+```
+
+- Without the directive, ` ```mermaid ` blocks stay rendered as raw code.
+- `mermaid` is only loaded (`import('mermaid')`) the first time the directive runs — and only in
+  the browser (SSR-safe).
+- The directive is **event-driven**: it watches for newly inserted diagrams and for dark/light
+  theme changes (via the `.dark` class on `<html>`), re-theming rendered diagrams automatically.
+
+---
+
 ## MarkdownService API
 
 Inject `MarkdownService` directly for headless usage (SSR pre-rendering, custom pipes, etc.):
@@ -411,15 +458,18 @@ import type {
 markdown-shiki-renderer/
 ├── projects/
 │   └── shikidown/               # Library source (ng-packagr)
-│       └── src/
-│           └── lib/
-│               ├── markdown.component.ts   # <shikidown> component
-│               ├── markdown.pipe.ts        # markdown pipe
-│               ├── markdown.service.ts     # parsing, Shiki init, LRU cache
-│               ├── markdown.provider.ts    # provideMarkdown() + registerAsCustomElement()
-│               ├── markdown.config.ts      # MarkdownConfig interface
-│               ├── markdown.tokens.ts      # MARKDOWN_CONFIG injection token
-│               └── markdown.types.ts       # ParsedBlock, RenderedBlock, hashSource
+│       ├── src/                 # Primary entry point → import from 'shikidown'
+│       │   └── lib/
+│       │       ├── markdown.component.ts   # <shikidown> component
+│       │       ├── markdown.pipe.ts        # markdown pipe
+│       │       ├── markdown.service.ts     # parsing, Shiki init, LRU cache
+│       │       ├── markdown.provider.ts    # provideMarkdown() + registerAsCustomElement()
+│       │       ├── markdown.config.ts      # MarkdownConfig interface
+│       │       ├── markdown.tokens.ts      # MARKDOWN_CONFIG injection token
+│       │       └── markdown.types.ts       # ParsedBlock, RenderedBlock, hashSource
+│       └── mermaid/             # Secondary entry point → import from 'shikidown/mermaid'
+│           └── src/
+│               └── mermaid.directive.ts    # MermaidDirective (dynamic import('mermaid'))
 └── src/                         # Demo application
     ├── pages/
     │   ├── home/                # Landing page

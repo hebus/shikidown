@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { MarkdownComponent, MermaidDirective } from 'shikidown';
+import { MarkdownComponent } from 'shikidown';
+import { MermaidDirective } from 'shikidown/mermaid';
 import { LanguageService } from '../../services/language.service';
 
 const HERO_MD: Record<'fr' | 'en', string> = {

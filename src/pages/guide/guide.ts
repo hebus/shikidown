@@ -1,7 +1,8 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, afterNextRender, computed, inject, signal } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { MarkdownComponent, MermaidDirective } from 'shikidown';
+import { MarkdownComponent } from 'shikidown';
+import { MermaidDirective } from 'shikidown/mermaid';
 import { LanguageService } from '../../services/language.service';
 
 const GUIDE_MD: Record<'fr' | 'en', string> = {
@@ -136,7 +137,8 @@ Pour optimiser le rendu, **utilisez la directive \`mermaid\`** fournie par shiki
 Plutôt que de relancer \`mermaid.run()\` à chaque cycle de rendu, elle est pilotée par événement (elle observe l'arrivée de nouveaux diagrammes et le changement de thème) et scopée à son hôte. Le thème dark/light est détecté automatiquement via la classe \`.dark\` sur \`<html>\` :
 
 \`\`\`typescript
-import { MarkdownComponent, MermaidDirective } from 'shikidown';
+import { MarkdownComponent } from 'shikidown';
+import { MermaidDirective } from 'shikidown/mermaid';
 
 @Component({
   selector: 'app-docs',
@@ -508,7 +510,8 @@ To optimize rendering, **use the \`mermaid\` directive** shipped with shikidown:
 Instead of re-running \`mermaid.run()\` on every render cycle, it is event-driven (it watches for newly inserted diagrams and theme changes) and scoped to its host. Dark/light theme is detected automatically via the \`.dark\` class on \`<html>\`:
 
 \`\`\`typescript
-import { MarkdownComponent, MermaidDirective } from 'shikidown';
+import { MarkdownComponent } from 'shikidown';
+import { MermaidDirective } from 'shikidown/mermaid';
 
 @Component({
   selector: 'app-docs',
