@@ -42,7 +42,7 @@ npm install shikidown shiki markdown-it
 npm install --save-dev @types/markdown-it
 ```
 
-**Peer dependencies** (already present in any Angular 21 project):
+**Peer dependencies** (already present in any Angular 22 project):
 
 | Package | Version |
 |---------|---------|
