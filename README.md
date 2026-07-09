@@ -2,7 +2,7 @@
 
 > Angular Markdown renderer with Shiki syntax highlighting, Angular component embedding, and incremental block rendering.
 
-[![Angular](https://img.shields.io/badge/Angular-21-red?logo=angular)](https://angular.dev)
+[![Angular](https://img.shields.io/badge/Angular-22-red?logo=angular)](https://angular.dev)
 [![Shiki](https://img.shields.io/badge/Shiki-v4-blue)](https://shiki.style)
 [![markdown-it](https://img.shields.io/badge/markdown--it-14-green)](https://markdown-it.github.io)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
@@ -46,8 +46,8 @@ npm install --save-dev @types/markdown-it
 
 | Package | Version |
 |---------|---------|
-| `@angular/core` | `^21.0.0` |
-| `@angular/elements` | `^21.0.0` |
+| `@angular/core` | `^22.0.0` |
+| `@angular/elements` | `^22.0.0` |
 | `markdown-it` | `^14.0.0` |
 | `shiki` | `^4.0.0` |
 

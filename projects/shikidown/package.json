@@ -7,8 +7,8 @@
     "url": "git+https://github.com/hebus/shikidown.git"
   },
   "peerDependencies": {
-    "@angular/common": ">=21.0.0",
-    "@angular/core": ">=21.0.0",
+    "@angular/common": ">=22.0.0",
+    "@angular/core": ">=22.0.0",
     "markdown-it": ">=14.0.0",
     "mermaid": ">=11.0.0",
     "shiki": ">=4.0.0"
