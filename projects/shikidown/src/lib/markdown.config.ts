@@ -8,6 +8,20 @@ export interface MarkdownThemePair {
   light: StringLiteralUnion<BundledTheme>;
 }
 
+/**
+ * Un module exportant des composants — typiquement le résultat d'un `import()`.
+ * Les sélecteurs sont lus dans les décorateurs, il n'y a donc rien à déclarer :
+ * les exports qui ne sont pas des composants sont simplement ignorés.
+ */
+export type ComponentModule = Record<string, unknown>;
+
+/**
+ * Un module déjà chargé, ou une fonction qui le charge à la demande.
+ * La forme paresseuse `() => import('./x')` garde le module hors du bundle
+ * initial jusqu'à ce qu'une page en ait besoin.
+ */
+export type ComponentModuleSource = ComponentModule | (() => Promise<ComponentModule>);
+
 /** Options markdown-it supportées */
 export interface MarkdownItOptions {
   html?: boolean;
@@ -36,6 +50,22 @@ export interface MarkdownConfig {
   languages?: StringLiteralUnion<BundledLanguage>[];
   /** Composants Angular enregistrés par sélecteur CSS pour l'embedding dans le Markdown */
   components?: Record<string, Type<unknown>>;
+  /**
+   * Modules de composants à enregistrer, sans avoir à lister les sélecteurs :
+   * ils sont lus dans les décorateurs. Alternative à `components` quand les
+   * composants sont nombreux, ou qu'on veut les charger paresseusement.
+   *
+   * @example
+   * ```typescript
+   * // Chargé au démarrage, sélecteurs déduits
+   * import * as demos from './demos';
+   * provideMarkdown({ componentModules: [demos] })
+   *
+   * // Chargé à la demande — reste hors du bundle initial
+   * provideMarkdown({ componentModules: [() => import('./demos')] })
+   * ```
+   */
+  componentModules?: ComponentModuleSource[];
   /**
    * Plugins markdown-it supplémentaires, appliqués dans l'ordre de déclaration.
    * Chaque plugin reçoit l'instance `MarkdownIt` et peut appeler `.use()` ou modifier les règles directement.

@@ -5,15 +5,16 @@ import {
   Injector,
   makeEnvironmentProviders,
   PLATFORM_ID,
+  reflectComponentType,
   Type,
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { createCustomElement } from '@angular/elements';
 import { MARKDOWN_COMPONENTS, MARKDOWN_CONFIG } from './markdown.tokens';
-import type { MarkdownConfig } from './markdown.config';
+import type { ComponentModule, ComponentModuleSource, MarkdownConfig } from './markdown.config';
 
 export function provideMarkdown(config: MarkdownConfig = {}): EnvironmentProviders {
-  const { components = {}, ...rest } = config;
+  const { components = {}, componentModules = [], ...rest } = config;
 
   return makeEnvironmentProviders([
     { provide: MARKDOWN_CONFIG, useValue: rest },
@@ -29,6 +30,9 @@ export function provideMarkdown(config: MarkdownConfig = {}): EnvironmentProvide
         for (const [selector, ComponentClass] of Object.entries(components)) {
           registerAsCustomElement(selector, ComponentClass as Type<unknown>, injector);
         }
+        // Pas d'attente : un module paresseux se résout après le bootstrap, et
+        // l'enregistrement tardif reste valide (upgrade rétroactif, cf. plus bas).
+        if (componentModules.length) void registerComponentModules(componentModules, injector);
       },
     },
   ]);
@@ -46,4 +50,55 @@ export function registerAsCustomElement(
   if (customElements.get(selector)) return;
   const element = createCustomElement(componentClass, { injector });
   customElements.define(selector, element);
+}
+
+/**
+ * Un nom de custom element valide comporte au moins un tiret et commence par
+ * une minuscule. Écarte donc les sélecteurs d'attribut (`[mermaid]`), les
+ * sélecteurs multiples (`a, b`) et les noms d'un seul mot — qu'un module peut
+ * légitimement exporter sans qu'ils soient destinés au Markdown.
+ */
+function isCustomElementName(selector: string): boolean {
+  return /^[a-z][a-z0-9.\-_]*-[a-z0-9.\-_]*$/.test(selector);
+}
+
+/**
+ * Enregistre tous les composants exportés par les modules donnés, en lisant
+ * leur sélecteur dans le décorateur : rien à déclarer côté appelant. Les
+ * exports qui ne sont pas des composants — constantes, fonctions, directives à
+ * sélecteur d'attribut — sont ignorés.
+ *
+ * Une source peut être une fonction `() => import('./x')`, auquel cas le module
+ * n'est chargé qu'ici : c'est ce qui permet de garder les composants d'une page
+ * hors du bundle initial. Enregistrer après que le HTML soit rendu ne pose pas
+ * de problème, la spécification des custom elements « upgradant »
+ * rétroactivement les balises déjà présentes dans le DOM.
+ *
+ * Idempotent, et sans effet côté serveur.
+ */
+export async function registerComponentModules(
+  sources: ComponentModuleSource[],
+  injector: Injector,
+): Promise<void> {
+  if (typeof customElements === 'undefined') return;
+
+  const modules = await Promise.all(
+    sources.map((source) => (typeof source === 'function' ? source() : Promise.resolve(source))),
+  );
+
+  for (const module of modules) {
+    registerModule(module, injector);
+  }
+}
+
+function registerModule(module: ComponentModule, injector: Injector): void {
+  for (const exported of Object.values(module)) {
+    // Une classe est une fonction : ce filtre écarte les constantes exportées
+    // par le module, dont `undefined`, sur lequel reflectComponentType lèverait.
+    if (typeof exported !== 'function') continue;
+
+    const mirror = reflectComponentType(exported as Type<unknown>);
+    if (!mirror || !isCustomElementName(mirror.selector)) continue;
+    registerAsCustomElement(mirror.selector, exported as Type<unknown>, injector);
+  }
 }

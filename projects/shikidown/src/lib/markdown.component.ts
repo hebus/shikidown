@@ -14,8 +14,9 @@ import { isPlatformBrowser } from '@angular/common';
 import type { SafeHtml } from '@angular/platform-browser';
 import { DomSanitizer } from '@angular/platform-browser';
 import { MarkdownService } from './markdown.service';
-import { registerAsCustomElement } from './markdown.provider';
+import { registerAsCustomElement, registerComponentModules } from './markdown.provider';
 import { MARKDOWN_CONFIG } from './markdown.tokens';
+import type { ComponentModuleSource } from './markdown.config';
 
 /**
  * Composant principal de rendu Markdown.
@@ -75,6 +76,14 @@ export class MarkdownComponent {
    */
   readonly components = input<Record<string, Type<unknown>>>({});
 
+  /**
+   * Modules de composants à enregistrer pour ce Markdown, sélecteurs déduits
+   * des décorateurs. Accepte des fonctions `() => import('...')` : le module
+   * reste alors hors du bundle initial, ce qui est le moyen de ne charger que
+   * les composants de la page affichée.
+   */
+  readonly componentModules = input<ComponentModuleSource[]>([]);
+
   // Stable reference cache: same hash → same SafeHtml object → Angular skips [innerHTML] DOM update
   private readonly safeHtmlCache = new Map<string, SafeHtml>();
 
@@ -126,6 +135,10 @@ export class MarkdownComponent {
       for (const [selector, ComponentClass] of Object.entries(this.components())) {
         registerAsCustomElement(selector, ComponentClass, this.injector);
       }
+      // Le signal est lu ici, dans le contexte réactif ; le chargement des
+      // modules se poursuit en dehors (un effect ne peut pas attendre).
+      const modules = this.componentModules();
+      if (modules.length) void registerComponentModules(modules, this.injector);
     });
   }
 }

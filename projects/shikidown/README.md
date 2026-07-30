@@ -26,6 +26,8 @@
 - [MarkdownComponent](#markdowncomponent)
 - [MarkdownPipe](#markdownpipe)
 - [Embedding Angular components](#embedding-angular-components)
+  - [Registering whole modules](#registering-whole-modules)
+  - [Lazy-loaded components](#lazy-loaded-components)
 - [Incremental rendering](#incremental-rendering)
 - [Mermaid diagrams](#mermaid-diagrams)
 - [MarkdownService API](#markdownservice-api)
@@ -130,6 +132,7 @@ provideMarkdown({
 | `theme` | `string \| { dark, light }` | `{ dark: 'github-dark', light: 'poimandres' }` | Shiki theme(s). A string uses the same theme for both modes. |
 | `languages` | `StringLiteralUnion<BundledLanguage>[]` | 17 common languages¹ | Shiki languages to preload at startup. |
 | `components` | `Record<string, Type<unknown>>` | `{}` | Angular components registered as Custom Elements. |
+| `componentModules` | `ComponentModuleSource[]` | `[]` | Modules whose exported components are registered, selectors read from their decorators. An entry may be a `() => import('…')` loader — see [Lazy-loaded components](#lazy-loaded-components). |
 | `plugins` | `Array<(md: unknown) => void>` | `[]` | markdown-it plugins applied in order. |
 | `markdownOptions` | `MarkdownItOptions` | — | markdown-it constructor options, merged with the library defaults (`html: true`, `linkify: true`, `typographer: true`). |
 | `incrementalRendering` | `boolean` | `false` | Enable block-level incremental rendering in `MarkdownComponent`. Has no effect on `MarkdownPipe`. |
@@ -154,6 +157,7 @@ provideMarkdown({
 |-------|------|---------|-------------|
 | `content` | `string` | `''` | Markdown source to render. |
 | `components` | `Record<string, Type<unknown>>` | `{}` | Additional Angular components registered as Custom Elements for this instance only. Merged with those declared in `provideMarkdown()`. |
+| `componentModules` | `ComponentModuleSource[]` | `[]` | Additional modules whose components are registered for this instance, selectors read from their decorators. Accepts `() => import('…')` loaders, which is how you keep a page's components out of the initial bundle — see [Lazy-loaded components](#lazy-loaded-components). |
 
 ### Local component registration
 
@@ -239,12 +243,68 @@ export class CounterComponent {
 }
 ```
 
+### Registering whole modules
+
+Listing every selector by hand gets tedious once you have more than a handful of components — and it is redundant, since each selector is already declared in its own `@Component` decorator. Pass the **module** instead and let shikidown read the selectors for you:
+
+```typescript
+import * as demos from './demos';
+
+provideMarkdown({ componentModules: [demos] })
+```
+
+Exports that are not components are ignored, so a module can freely export mock data, helper functions or attribute-selector directives alongside its components.
+
 ### Global vs. local registration
 
 | Method | Scope | When to use |
 |--------|-------|-------------|
 | `provideMarkdown({ components })` | Whole app | Components used across many pages |
-| `[components]` input | Single `<shikidown>` instance | Page-specific or lazy-loaded components |
+| `provideMarkdown({ componentModules })` | Whole app | Many components, without listing selectors |
+| `[components]` input | Single `<shikidown>` instance | Page-specific components |
+| `[componentModules]` input | Single `<shikidown>` instance | Page-specific components, loaded on demand |
+
+### Lazy-loaded components
+
+A `componentModules` entry can be a **function returning a dynamic import**, in which case the module is only fetched when it is actually needed. This matters: components registered at bootstrap live in your initial bundle, however lazy your routes are. In a documentation site with sixty pages, that means shipping all sixty pages' components to every visitor.
+
+Give each page a loader, and resolve only the one being displayed:
+
+```typescript
+// demo-loaders.ts — the only mapping you maintain
+import type { ComponentModuleSource } from 'shikidown';
+
+export const DEMO_LOADERS: Record<string, ComponentModuleSource[]> = {
+  button: [() => import('./demos/button.demos')],
+  tag:    [() => import('./demos/tag.demos')],
+  // A page may pull in components defined elsewhere:
+  'tag-advanced': [() => import('./demos/tag.demos'), () => import('./demos/shared.demos')],
+};
+```
+
+```typescript
+// The page component, reached through a lazy route
+@Component({
+  selector: 'doc-page',
+  imports: [MarkdownComponent],
+  template: `<shikidown [content]="content()" [componentModules]="modules()" />`,
+})
+export class DocPage {
+  private readonly slug = inject(ActivatedRoute).snapshot.data['slug'] as string;
+
+  protected readonly modules = computed(() => DEMO_LOADERS[this.slug] ?? []);
+  protected readonly content = resource({
+    loader: () => fetch(`docs/${this.slug}.md`).then(r => r.text()),
+  }).value;
+}
+```
+
+**Why registering after the markdown is rendered still works.** Custom element upgrades are retroactive by specification: when `customElements.define()` runs, the browser walks the document and upgrades any matching element already in the DOM. So an unknown `<my-counter>` sitting inertly in freshly rendered HTML comes alive as soon as its definition lands — no ordering constraint, no flash of missing content beyond the import itself. In practice the import wins the race anyway, since the markdown is usually fetched asynchronously too.
+
+Two things worth knowing:
+
+- Registration is **irreversible** — `customElements` has no undefine. Pass an injector whose lifetime is at least as long as the page (the component's own injector is fine; a short-lived one is not), and expect a selector to stay registered for the rest of the session.
+- Components that read HTML attributes still work: the browser applies `attributeChangedCallback` during the upgrade, so attributes present before registration are not lost.
 
 ---
 
@@ -443,10 +503,12 @@ Add this inline script before your app bundle to apply the saved preference befo
 
 ```typescript
 import type {
-  MarkdownConfig,      // Full configuration object for provideMarkdown()
-  MarkdownThemePair,   // { dark: StringLiteralUnion<BundledTheme>; light: StringLiteralUnion<BundledTheme> }
-  ParsedBlock,         // { hash, startLine, endLine, tokens, source }
-  RenderedBlock,       // { hash: string; html: string }
+  MarkdownConfig,        // Full configuration object for provideMarkdown()
+  MarkdownThemePair,     // { dark: StringLiteralUnion<BundledTheme>; light: StringLiteralUnion<BundledTheme> }
+  ComponentModule,       // Record<string, unknown> — a module exporting components
+  ComponentModuleSource, // ComponentModule | (() => Promise<ComponentModule>)
+  ParsedBlock,           // { hash, startLine, endLine, tokens, source }
+  RenderedBlock,         // { hash: string; html: string }
 } from 'shikidown';
 ```
 
@@ -463,7 +525,7 @@ markdown-shiki-renderer/
 │       │       ├── markdown.component.ts   # <shikidown> component
 │       │       ├── markdown.pipe.ts        # markdown pipe
 │       │       ├── markdown.service.ts     # parsing, Shiki init, LRU cache
-│       │       ├── markdown.provider.ts    # provideMarkdown() + registerAsCustomElement()
+│       │       ├── markdown.provider.ts    # provideMarkdown(), registerAsCustomElement(), registerComponentModules()
 │       │       ├── markdown.config.ts      # MarkdownConfig interface
 │       │       ├── markdown.tokens.ts      # MARKDOWN_CONFIG injection token
 │       │       └── markdown.types.ts       # ParsedBlock, RenderedBlock, hashSource
