@@ -14,7 +14,7 @@ import { isPlatformBrowser } from '@angular/common';
 import type { SafeHtml } from '@angular/platform-browser';
 import { DomSanitizer } from '@angular/platform-browser';
 import { MarkdownService } from './markdown.service';
-import { registerAsCustomElement, registerComponentModules } from './markdown.provider';
+import { registerAsCustomElement, registerComponentModules, selectorUsedIn } from './markdown.provider';
 import { MARKDOWN_CONFIG } from './markdown.tokens';
 import type { ComponentModuleSource } from './markdown.config';
 
@@ -135,10 +135,20 @@ export class MarkdownComponent {
       for (const [selector, ComponentClass] of Object.entries(this.components())) {
         registerAsCustomElement(selector, ComponentClass, this.injector);
       }
-      // Le signal est lu ici, dans le contexte réactif ; le chargement des
+      // Les signaux sont lus ici, dans le contexte réactif ; le chargement des
       // modules se poursuit en dehors (un effect ne peut pas attendre).
       const modules = this.componentModules();
-      if (modules.length) void registerComponentModules(modules, this.injector);
+      const content = this.content();
+      // Seuls les sélecteurs présents dans ce document sont définis : un module de
+      // page exporte souvent d'autres composants (un dialogue monté impérativement,
+      // par exemple), que `customElements.define` — global et rétroactif — ferait
+      // instancier une seconde fois à leur insertion dans le DOM. L'effect se
+      // rejoue quand le contenu change, et l'enregistrement tardif reste valide.
+      if (modules.length) {
+        void registerComponentModules(modules, this.injector, (selector) =>
+          selectorUsedIn(content, selector),
+        );
+      }
     });
   }
 }

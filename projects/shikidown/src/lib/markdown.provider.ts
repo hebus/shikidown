@@ -74,11 +74,16 @@ function isCustomElementName(selector: string): boolean {
  * de problème, la spécification des custom elements « upgradant »
  * rétroactivement les balises déjà présentes dans le DOM.
  *
+ * `isUsed` restreint l'enregistrement aux sélecteurs réellement employés par le
+ * document — voir {@link selectorUsedIn}. Sans lui, tout composant exporté par
+ * le module est enregistré.
+ *
  * Idempotent, et sans effet côté serveur.
  */
 export async function registerComponentModules(
   sources: ComponentModuleSource[],
   injector: Injector,
+  isUsed?: (selector: string) => boolean,
 ): Promise<void> {
   if (typeof customElements === 'undefined') return;
 
@@ -87,11 +92,29 @@ export async function registerComponentModules(
   );
 
   for (const module of modules) {
-    registerModule(module, injector);
+    registerModule(module, injector, isUsed);
   }
 }
 
-function registerModule(module: ComponentModule, injector: Injector): void {
+/**
+ * Vrai si `content` contient une balise ouvrante pour ce sélecteur.
+ *
+ * Le test se fait sur la source Markdown, où les composants apparaissent tels
+ * quels (`<demo-foo>` / `<demo-foo />`). Le caractère suivant doit délimiter la
+ * balise, sans quoi `<demo-foo>` ferait aussi correspondre `demo-foo-bar`.
+ */
+export function selectorUsedIn(content: string, selector: string): boolean {
+  const index = content.indexOf(`<${selector}`);
+  if (index === -1) return false;
+  const next = content[index + selector.length + 1];
+  return next === undefined || next === '>' || next === '/' || /\s/.test(next);
+}
+
+function registerModule(
+  module: ComponentModule,
+  injector: Injector,
+  isUsed?: (selector: string) => boolean,
+): void {
   for (const exported of Object.values(module)) {
     // Une classe est une fonction : ce filtre écarte les constantes exportées
     // par le module, dont `undefined`, sur lequel reflectComponentType lèverait.
@@ -99,6 +122,15 @@ function registerModule(module: ComponentModule, injector: Injector): void {
 
     const mirror = reflectComponentType(exported as Type<unknown>);
     if (!mirror || !isCustomElementName(mirror.selector)) continue;
+
+    // Un module de page exporte souvent plus que ses balises Markdown : un dialogue
+    // monté impérativement, un composant hôte réutilisé ailleurs. Les définir tous
+    // ne serait pas neutre — `customElements.define` est global et rétroactif, si
+    // bien qu'un composant créé par ailleurs via `createComponent()` verrait son
+    // élément hôte « upgradé » à l'insertion dans le DOM, donc instancié une
+    // seconde fois, hors du contexte d'injection prévu par son créateur.
+    if (isUsed && !isUsed(mirror.selector)) continue;
+
     registerAsCustomElement(mirror.selector, exported as Type<unknown>, injector);
   }
 }

@@ -1,6 +1,6 @@
 import { Component, Directive, Injector } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { registerComponentModules } from 'shikidown';
+import { registerComponentModules, selectorUsedIn } from 'shikidown';
 
 // `customElements.define` is global and irreversible, so every test uses its own
 // tag names — otherwise a second registration of the same name would silently
@@ -104,5 +104,52 @@ describe('registerComponentModules', () => {
 
     expect(customElements.get('spec-mixed-eager')).toBeDefined();
     expect(customElements.get('spec-mixed-lazy')).toBeDefined();
+  });
+
+  describe('isUsed filter', () => {
+    it('only registers selectors the document actually uses', async () => {
+      @Component({ selector: 'spec-used', template: 'used' })
+      class Used {}
+
+      // A dialog mounted imperatively by the page: exported, but never written as a tag.
+      @Component({ selector: 'spec-unused', template: 'unused' })
+      class Unused {}
+
+      const content = '# Page\n\n<spec-used></spec-used>\n';
+      await registerComponentModules([{ Used, Unused }], injector, (selector) =>
+        selectorUsedIn(content, selector),
+      );
+
+      expect(customElements.get('spec-used')).toBeDefined();
+      // Defining it would make the browser upgrade — and re-instantiate — the host
+      // element that `createComponent()` inserts, outside its call context.
+      expect(customElements.get('spec-unused')).toBeUndefined();
+    });
+
+    it('registers everything when no filter is given', async () => {
+      @Component({ selector: 'spec-nofilter', template: 'x' })
+      class NoFilter {}
+
+      await registerComponentModules([{ NoFilter }], injector);
+
+      expect(customElements.get('spec-nofilter')).toBeDefined();
+    });
+  });
+
+  describe('selectorUsedIn', () => {
+    it('matches a tag whatever its closing form', () => {
+      expect(selectorUsedIn('<demo-foo></demo-foo>', 'demo-foo')).toBe(true);
+      expect(selectorUsedIn('<demo-foo />', 'demo-foo')).toBe(true);
+      expect(selectorUsedIn('<demo-foo class="x">', 'demo-foo')).toBe(true);
+    });
+
+    it('does not let a selector match a longer one', () => {
+      // The bug this guards: `<demo-foo-bar>` must not register `demo-foo`.
+      expect(selectorUsedIn('<demo-foo-bar></demo-foo-bar>', 'demo-foo')).toBe(false);
+    });
+
+    it('is false for an absent selector', () => {
+      expect(selectorUsedIn('# Title\n\ntext', 'demo-foo')).toBe(false);
+    });
   });
 });

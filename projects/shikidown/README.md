@@ -255,6 +255,16 @@ provideMarkdown({ componentModules: [demos] })
 
 Exports that are not components are ignored, so a module can freely export mock data, helper functions or attribute-selector directives alongside its components.
 
+### Only what the page uses
+
+Through the **`[componentModules]` input**, shikidown registers only the selectors that actually appear in the document. A page module usually exports more than its Markdown tags — a dialog mounted imperatively, a host component reused elsewhere — and defining those would not be neutral.
+
+`customElements.define` is global and retroactive: once a tag is defined, the browser *upgrades* any element bearing it as soon as it enters the DOM. A component that other code creates with `createComponent()` and appends to the body would therefore be instantiated a **second** time, outside the injection context its creator set up — and typically fail on whatever that context provided. A callable dialog reading its arguments from an injected handle simply never opens, with nothing pointing back at the registration.
+
+This filtering does not apply to `provideMarkdown({ componentModules })`, which has no document to look at and still registers everything it is given.
+
+`selectorUsedIn(content, selector)` is exported if you need the same test elsewhere, and `registerComponentModules` takes an optional third argument to filter with your own predicate.
+
 ### Global vs. local registration
 
 | Method | Scope | When to use |
