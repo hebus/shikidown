@@ -566,12 +566,6 @@ markdown-shiki-renderer/
 
 Each version is documented on the **[GitHub releases page](https://github.com/hebus/shikidown/releases)** — what changed, why, and the migration steps when there are any.
 
-| Version | Highlights |
-|---------|------------|
-| **[2.2.0](https://github.com/hebus/shikidown/releases/tag/v2.2.0)** | `[componentModules]` registers only the selectors the document actually uses |
-| **[2.1.0](https://github.com/hebus/shikidown/releases/tag/v2.1.0)** | `componentModules`: register by module, with optional lazy loading |
-| **[2.0.0](https://github.com/hebus/shikidown/releases/tag/v2.0.0)** | Mermaid moved to `shikidown/mermaid`; Angular 22 required |
-
 ---
 
 ## License
