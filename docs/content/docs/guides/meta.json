@@ -1,0 +1,12 @@
+{
+  "title": "Guides",
+  "pages": [
+    "markdown-component",
+    "markdown-pipe",
+    "embedding-components",
+    "lazy-loading",
+    "incremental-rendering",
+    "mermaid",
+    "styling-dark-mode"
+  ]
+}

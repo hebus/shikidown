@@ -1,0 +1,147 @@
+---
+title: Embedding Angular components
+description: Register a component, write its selector in the Markdown — how it works, how attributes map to inputs, and why registration is filtered.
+---
+
+Any component registered with shikidown can be placed in a document using its CSS selector:
+
+````markdown
+# My document
+
+Here is an interactive counter:
+
+<my-counter initial-count="5" label="Votes"></my-counter>
+
+And an alert:
+
+<my-alert type="warning" title="Heads up" message="This is important."></my-alert>
+````
+
+Under the hood the library uses **`@angular/elements`**: each component is wrapped in a standard
+Custom Element and handed to `customElements.define()`. The browser instantiates it when the
+rendered HTML enters the DOM.
+
+## Attribute to input mapping
+
+HTML attributes are strings, and the browser maps `kebab-case` attribute names to `camelCase`
+properties when it upgrades a Custom Element.
+
+| HTML attribute | Angular `input()` |
+|---|---|
+| `initial-count` | `initialCount` |
+| `label` | `label` |
+| `is-active` | `isActive` |
+
+For anything that is not a string, use Angular's transform functions:
+
+```typescript
+import { booleanAttribute, input, numberAttribute } from '@angular/core';
+
+@Component({ selector: 'my-counter' })
+export class CounterComponent {
+  readonly initialCount = input(0, { transform: numberAttribute });
+  readonly disabled = input(false, { transform: booleanAttribute });
+}
+```
+
+## Registering whole modules
+
+Listing every selector by hand gets tedious past a handful of components, and it is redundant —
+each selector is already declared in its own `@Component` decorator. Pass the **module** and let
+shikidown read them:
+
+```typescript
+import * as demos from './demos';
+
+provideMarkdown({ componentModules: [demos] });
+```
+
+Exports that are not components are ignored, so a module can freely export mock data, helper
+functions or attribute-selector directives alongside its components. Concretely, an export is
+registered only if it is a function, `reflectComponentType()` recognises it, and its selector looks
+like a valid Custom Element name — at least one hyphen, starting with a lowercase letter. That last
+rule is what excludes attribute selectors such as `[mermaid]`, multi-selectors such as `a, b`, and
+single-word selectors.
+
+## Only what the page uses
+
+Through the **`[componentModules]` input**, shikidown registers only the selectors that actually
+appear in the document. This is not an optimisation — it is a correctness measure.
+
+`customElements.define` is global and retroactive: once a tag is defined, the browser *upgrades*
+any element bearing it as soon as it enters the DOM. A page module usually exports more than its
+Markdown tags — a dialog mounted imperatively, a host component reused elsewhere. A component that
+other code creates with `createComponent()` and appends to the body would therefore be instantiated
+a **second** time, outside the injection context its creator set up, and typically fail on whatever
+that context provided. A callable dialog reading its arguments from an injected handle simply never
+opens, with nothing pointing back at the registration.
+
+<Callout type="warn">
+  This filtering applies to the `[componentModules]` **input** only.
+  `provideMarkdown({ componentModules })` has no document to inspect and registers everything it is
+  given.
+</Callout>
+
+[`selectorUsedIn(content, selector)`](/docs/api/provide-markdown#selectorusedin) is exported if you
+need the same test elsewhere, and
+[`registerComponentModules()`](/docs/api/provide-markdown#registercomponentmodules) takes an
+optional third argument to filter with your own predicate.
+
+## Global vs. local registration
+
+| Method | Scope | When to use |
+|---|---|---|
+| `provideMarkdown({ components })` | Whole app | Components used across many pages |
+| `provideMarkdown({ componentModules })` | Whole app | Many components, without listing selectors |
+| `[components]` input | A single `<shikidown>` | Page-specific components |
+| `[componentModules]` input | A single `<shikidown>` | Page-specific components, loaded on demand |
+
+"Scope" here describes where you *declare* them. The Custom Element registry itself is global and
+has no undefine — see [Lazy-loaded components](/docs/guides/lazy-loading#two-things-worth-knowing).
+
+## Things that will trip you up
+
+<Accordions>
+
+<Accordion title="My component renders as an empty tag">
+
+The selector was never registered, or it was registered under a different name. Check that the
+selector in the Markdown matches the `@Component({ selector })` exactly, and that the component is
+reachable from one of the four registration paths above.
+
+If you used `[componentModules]`, remember that only selectors *present in the document* are
+registered — a typo in the tag silently prevents registration.
+
+</Accordion>
+
+<Accordion title="Inputs are undefined or arrive as strings">
+
+Attributes are always strings. Use `numberAttribute` / `booleanAttribute` transforms, and check the
+`kebab-case` to `camelCase` spelling. `initialCount` is set from `initial-count`, not from
+`initialcount`.
+
+</Accordion>
+
+<Accordion title="markdownOptions has html: false">
+
+Component selectors are raw HTML in the Markdown source. With `html: false`, markdown-it escapes
+them and they never become elements. The library default is `html: true`.
+
+</Accordion>
+
+<Accordion title="The component appears twice, or fails on injection">
+
+Something else in the application creates that component imperatively. Registering its selector
+makes the browser upgrade the element a second time. Use the `[componentModules]` input rather than
+the provider, so only the selectors the document uses are defined.
+
+</Accordion>
+
+</Accordions>
+
+## See also
+
+<Cards>
+  <Card title="Lazy-loaded components" href="/docs/guides/lazy-loading" description="Keeping sixty pages' components out of every visitor's bundle." />
+  <Card title="provideMarkdown API" href="/docs/api/provide-markdown" description="Signatures for the registration helpers." />
+</Cards>

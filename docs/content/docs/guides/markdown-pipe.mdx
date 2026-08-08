@@ -1,0 +1,81 @@
+---
+title: MarkdownPipe
+description: A pipe returning Signal<SafeHtml>, for when you need the HTML inside a template you already control.
+---
+
+`MarkdownPipe` renders Markdown to `SafeHtml` you can bind wherever you like. Reach for it when
+`<shikidown>` would be one wrapper too many — inside a card you already lay out, a table cell, a
+tooltip.
+
+```typescript
+import { MarkdownPipe } from 'shikidown';
+
+@Component({
+  imports: [MarkdownPipe],
+  template: `<div [innerHTML]="(md | markdown)()"></div>`,
+})
+export class MyComponent {
+  readonly md = '# Hello from the pipe';
+}
+```
+
+## It returns a signal, not a string
+
+Rendering is asynchronous — Shiki is loaded on demand — so the pipe returns a
+`Signal<SafeHtml>` rather than the HTML itself. **Call it** in the template:
+
+```html
+<!-- Correct -->
+<div [innerHTML]="(md | markdown)()"></div>
+
+<!-- Wrong: binds the signal object -->
+<div [innerHTML]="md | markdown"></div>
+```
+
+The signal starts as empty HTML and fills in when parsing resolves. To avoid an empty wrapper in
+the meantime, bind through `@let`:
+
+```html
+@let html = (md | markdown)();
+@if (html) {
+  <div [innerHTML]="html"></div>
+}
+```
+
+## Signature
+
+```typescript
+transform(content: string | null | undefined): Signal<SafeHtml>
+```
+
+`null` and `undefined` yield an already-resolved signal holding empty HTML — no parse is attempted.
+
+## Error handling
+
+A parse failure is logged as `[shikidown] MarkdownPipe: failed to parse content` and the signal
+falls back to empty HTML. Unlike [`MarkdownComponent`](/docs/guides/markdown-component), the pipe
+has no error state to display: if you need one, render through the component instead.
+
+## Limitations
+
+<Callout type="warn">
+  The pipe does **not** support [incremental rendering](/docs/guides/incremental-rendering).
+  `incrementalRendering: true` in `provideMarkdown()` has no effect here — every change re-parses
+  the whole document and replaces the whole DOM subtree, which resets the state of any embedded
+  component.
+</Callout>
+
+For a live editor, or any document that changes as the user types, use
+[`MarkdownComponent`](/docs/guides/markdown-component).
+
+Embedded components themselves do work: selectors registered through `provideMarkdown()` are
+already defined when the pipe's output reaches the DOM. What the pipe has no equivalent for is the
+`[components]` and `[componentModules]` inputs — there is no instance to attach them to, so
+per-page registration must go through
+[`registerComponentModules()`](/docs/api/provide-markdown#registercomponentmodules) yourself.
+
+## Content security
+
+As with the component, the HTML is passed through `bypassSecurityTrustHtml`. Treat the Markdown
+source as trusted input — see
+[Content security](/docs/guides/markdown-component#content-security).

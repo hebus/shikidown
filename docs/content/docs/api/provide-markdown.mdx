@@ -1,0 +1,131 @@
+---
+title: provideMarkdown
+description: The provider and the three registration helpers exported alongside it.
+---
+
+## provideMarkdown
+
+```typescript
+function provideMarkdown(config?: MarkdownConfig): EnvironmentProviders
+```
+
+Configures shikidown for the application. Returns `EnvironmentProviders`, so it belongs in the
+`providers` array of `ApplicationConfig` (or of a route, if you want a per-feature configuration).
+
+```typescript title="app.config.ts"
+import { provideMarkdown } from 'shikidown';
+
+export const appConfig: ApplicationConfig = {
+  providers: [provideMarkdown({ theme: 'github-dark' })],
+};
+```
+
+Every option is described in [Configuration](/docs/configuration). Calling it is **optional**: the
+configuration token is injected with `{ optional: true }` throughout, so the library falls back to
+its defaults when the provider is absent.
+
+Beyond storing the configuration, `provideMarkdown()` schedules an `ENVIRONMENT_INITIALIZER` that:
+
+1. returns immediately when not running in a browser — no Custom Element is ever defined during SSR;
+2. registers every entry of `components` through [`registerAsCustomElement`](#registerascustomelement);
+3. registers every entry of `componentModules` through [`registerComponentModules`](#registercomponentmodules), **without a filter**.
+
+<Callout type="warn">
+  Step 3 has no document to inspect, so it registers *every* component the modules export. The
+  `[componentModules]` input on [`MarkdownComponent`](/docs/guides/markdown-component) does filter —
+  see [Only what the page uses](/docs/guides/embedding-components#only-what-the-page-uses).
+</Callout>
+
+The module loaders are not awaited: a lazy module resolves after bootstrap, and registering late is
+still valid because custom element upgrades are retroactive.
+
+---
+
+## registerAsCustomElement
+
+```typescript
+function registerAsCustomElement(
+  selector: string,
+  componentClass: Type<unknown>,
+  injector: Injector,
+): void
+```
+
+Wraps an Angular component with `createCustomElement()` and defines it under `selector`.
+
+**Idempotent** — returns immediately if the selector is already defined, so calling it from several
+places is safe.
+
+```typescript
+import { registerAsCustomElement } from 'shikidown';
+
+registerAsCustomElement('my-widget', WidgetComponent, inject(Injector));
+```
+
+<Callout type="warn">
+  The injector you pass becomes the component's environment injector for the rest of the session —
+  there is no way to undefine a custom element. Pass one whose lifetime is at least as long as the
+  page.
+</Callout>
+
+---
+
+## registerComponentModules
+
+```typescript
+function registerComponentModules(
+  sources: ComponentModuleSource[],
+  injector: Injector,
+  isUsed?: (selector: string) => boolean,
+): Promise<void>
+```
+
+Registers every component exported by the given modules, reading each selector from its
+`@Component` decorator. Nothing to declare on the calling side.
+
+A source may be a module object or a `() => import('…')` loader; loaders are resolved here, which
+is what keeps lazily-registered components out of the initial bundle.
+
+An export is registered only if **all** of the following hold:
+
+- it is a function (this filters out constants, mock data and `undefined`);
+- `reflectComponentType()` recognises it as a component;
+- its selector is a valid custom element name — `/^[a-z][a-z0-9.\-_]*-[a-z0-9.\-_]*$/`, i.e. at
+  least one hyphen and a lowercase first character. This excludes attribute selectors such as
+  `[mermaid]`, multi-selectors such as `a, b`, and single-word selectors;
+- `isUsed` returns `true`, when supplied.
+
+The function is idempotent and a no-op when `customElements` is undefined, which makes it safe to
+call during SSR.
+
+```typescript
+import { registerComponentModules, selectorUsedIn } from 'shikidown';
+
+await registerComponentModules(
+  [() => import('./demos/button.demos')],
+  injector,
+  (selector) => selectorUsedIn(markdown, selector),
+);
+```
+
+---
+
+## selectorUsedIn
+
+```typescript
+function selectorUsedIn(content: string, selector: string): boolean
+```
+
+True when `content` contains an opening tag for `selector`.
+
+The test runs on the Markdown source, where components appear literally as `<demo-foo>` or
+`<demo-foo />`. The character following the selector must delimit the tag — `>`, `/`, whitespace, or
+end of string — so `<demo-foo>` does not match `demo-foo-bar`.
+
+```typescript
+selectorUsedIn('<demo-foo />', 'demo-foo');      // true
+selectorUsedIn('<demo-foo-bar />', 'demo-foo');  // false
+```
+
+This is the predicate `MarkdownComponent` passes to `registerComponentModules()` for its
+`[componentModules]` input. It is exported so you can apply the same rule elsewhere.

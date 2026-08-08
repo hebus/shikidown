@@ -1,0 +1,94 @@
+---
+title: Lazy-loaded components
+description: Give each page a module loader so its components stay out of the initial bundle.
+---
+
+A `componentModules` entry can be a **function returning a dynamic import**, in which case the
+module is only fetched when it is actually needed.
+
+This matters more than it first appears: components registered at bootstrap live in your initial
+bundle, however lazy your routes are. In a documentation site with sixty pages, that means shipping
+all sixty pages' components to every visitor — including those who only ever read the home page.
+
+## The pattern
+
+Give each page a loader, and resolve only the one being displayed.
+
+```typescript title="demo-loaders.ts"
+import type { ComponentModuleSource } from 'shikidown';
+
+export const DEMO_LOADERS: Record<string, ComponentModuleSource[]> = {
+  button: [() => import('./demos/button.demos')],
+  tag: [() => import('./demos/tag.demos')],
+  // A page may pull in components defined elsewhere:
+  'tag-advanced': [() => import('./demos/tag.demos'), () => import('./demos/shared.demos')],
+};
+```
+
+```typescript title="doc-page.ts"
+@Component({
+  selector: 'doc-page',
+  imports: [MarkdownComponent],
+  template: `<shikidown [content]="content()" [componentModules]="modules()" />`,
+})
+export class DocPage {
+  private readonly slug = inject(ActivatedRoute).snapshot.data['slug'] as string;
+
+  protected readonly modules = computed(() => DEMO_LOADERS[this.slug] ?? []);
+  protected readonly content = resource({
+    loader: () => fetch(`docs/${this.slug}.md`).then((r) => r.text()),
+  }).value;
+}
+```
+
+That mapping is the only thing you maintain. Selectors are read from the decorators, and only the
+ones the document actually contains are registered.
+
+## Why registering after rendering still works
+
+Custom element upgrades are **retroactive by specification**: when `customElements.define()` runs,
+the browser walks the document and upgrades any matching element already in the DOM. An unknown
+`<my-counter>` sitting inertly in freshly rendered HTML therefore comes alive the moment its
+definition lands — no ordering constraint, no flash of missing content beyond the import itself.
+
+In practice the import usually wins the race anyway, since the Markdown is fetched asynchronously
+too.
+
+Attributes are not lost either: the browser runs `attributeChangedCallback` during the upgrade, so
+values present before registration are applied.
+
+## Two things worth knowing
+
+<Callout type="warn">
+  **Registration is irreversible.** The `customElements` registry has no undefine. Pass an injector
+  whose lifetime is at least as long as the page — the component's own injector is fine, a
+  short-lived one is not — and expect a selector to stay registered for the rest of the session.
+</Callout>
+
+Second, the same selector cannot be registered against two different components. If two pages
+export different components under the same tag, the first one to load wins and the second is
+silently ignored. Keep selectors unique across your demo modules.
+
+## Combining with eager registration
+
+The two are additive. Components used on every page belong in the provider; page-specific ones
+belong in the input.
+
+```typescript title="app.config.ts"
+provideMarkdown({
+  // On every page — worth the initial bundle cost
+  components: { 'doc-note': NoteComponent },
+});
+```
+
+```html
+<!-- Only this page — fetched when the route is reached -->
+<shikidown [content]="content()" [componentModules]="modules()" />
+```
+
+## See also
+
+<Cards>
+  <Card title="Embedding components" href="/docs/guides/embedding-components" description="Registration paths, attribute mapping, and the filtering rule." />
+  <Card title="ComponentModuleSource" href="/docs/api/types#componentmodulesource" description="The exact type accepted by componentModules." />
+</Cards>

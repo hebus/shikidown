@@ -1,0 +1,167 @@
+---
+title: Configuration
+description: Every option accepted by provideMarkdown(), with its default and what it affects.
+---
+
+`provideMarkdown()` takes a [`MarkdownConfig`](/docs/api/types#markdownconfig) object. Every field
+is optional, and the library works without the provider at all — the configuration token is
+injected with `{ optional: true }` and the defaults below apply.
+
+```typescript title="app.config.ts"
+provideMarkdown({
+  // Shiki theme — a string, or a dark/light pair
+  theme: { dark: 'github-dark', light: 'catppuccin-latte' },
+
+  // Shiki languages to preload at startup
+  languages: ['typescript', 'javascript', 'html', 'css', 'bash', 'json'],
+
+  // Angular components registered as Custom Elements
+  components: {
+    'my-alert': AlertComponent,
+    'my-counter': CounterComponent,
+  },
+
+  // ...or whole modules, with selectors read from the decorators
+  componentModules: [() => import('./demos')],
+
+  // Additional markdown-it plugins
+  plugins: [markdownItAnchor, markdownItFootnote],
+
+  // markdown-it constructor options, merged with the library defaults
+  markdownOptions: { breaks: true },
+
+  // Block-level incremental rendering (MarkdownComponent only)
+  incrementalRendering: true,
+
+  // LRU block cache capacity
+  blockCacheSize: 512,
+});
+```
+
+## Options
+
+<TypeTable
+  type={{
+    theme: {
+      description: 'Shiki theme. A single string uses the same theme for both colour schemes; a pair emits both at once and switches through CSS variables.',
+      type: 'string | MarkdownThemePair',
+      default: "{ dark: 'github-dark', light: 'poimandres' }",
+    },
+    languages: {
+      description: 'Shiki languages preloaded when the highlighter starts. A fence in a language that was not preloaded is rendered unhighlighted rather than failing.',
+      type: 'StringLiteralUnion<BundledLanguage>[]',
+      default: '16 common languages',
+    },
+    components: {
+      description: 'Angular components registered as Custom Elements, keyed by the selector you will write in the Markdown.',
+      type: 'Record<string, Type<unknown>>',
+      default: '{}',
+    },
+    componentModules: {
+      description: 'Modules whose exported components are registered, with selectors read from their decorators. An entry may be a () => import(…) loader.',
+      type: 'ComponentModuleSource[]',
+      default: '[]',
+    },
+    plugins: {
+      description: 'markdown-it plugins, applied in order at initialisation.',
+      type: 'Array<(md: MarkdownIt) => void>',
+      default: '[]',
+    },
+    markdownOptions: {
+      description: 'markdown-it constructor options, merged over the library defaults (html: true, linkify: true, typographer: true).',
+      type: 'MarkdownItOptions',
+      default: 'library defaults',
+    },
+    incrementalRendering: {
+      description: 'Renders the document as independent blocks and re-processes only those whose source changed. Affects MarkdownComponent only — MarkdownPipe ignores it.',
+      type: 'boolean',
+      default: 'false',
+    },
+    blockCacheSize: {
+      description: 'Maximum number of rendered blocks kept in the LRU cache shared by all MarkdownComponent instances.',
+      type: 'number',
+      default: '256',
+    },
+  }}
+/>
+
+## Themes
+
+A single string applies one theme to both colour schemes:
+
+```typescript
+provideMarkdown({ theme: 'github-dark' });
+```
+
+A pair emits **both** themes in one pass. Shiki writes the light colours as inline styles and the
+dark ones as `--shiki-dark-*` CSS variables, so switching schemes is a pure CSS operation — no
+re-highlighting, no flash.
+
+```typescript
+provideMarkdown({ theme: { dark: 'github-dark', light: 'catppuccin-latte' } });
+```
+
+Activating the dark values requires a few CSS rules; they are given in
+[Styling and dark mode](/docs/guides/styling-dark-mode).
+
+<Callout type="warn">
+  Changing the theme at runtime does not invalidate already-rendered blocks. Call
+  [`MarkdownService.clearCache()`](/docs/api/markdown-service#clearcache) after the change.
+</Callout>
+
+## Languages
+
+Shiki loads grammars explicitly. The defaults cover the sixteen languages most often found in
+technical documents:
+
+`typescript`, `javascript`, `jsx`, `tsx`, `html`, `css`, `scss`, `json`, `yaml`, `bash`, `shell`,
+`markdown`, `sql`, `python`, `rust`, `go`
+
+Supplying `languages` **replaces** that list rather than extending it, so include the ones you
+still need:
+
+```typescript
+provideMarkdown({
+  languages: ['typescript', 'html', 'css', 'angular-ts', 'angular-html'],
+});
+```
+
+A fence tagged with a language that was not preloaded is emitted as an unhighlighted
+`<pre class="shiki">` block. Nothing throws.
+
+## markdown-it options and plugins
+
+`markdownOptions` is merged **over** the library defaults, which are `html: true`,
+`linkify: true` and `typographer: true`. `html: true` is what allows component selectors to survive
+parsing, so overriding it to `false` disables component embedding.
+
+```typescript
+import markdownItAnchor from 'markdown-it-anchor';
+import markdownItFootnote from 'markdown-it-footnote';
+
+provideMarkdown({
+  plugins: [markdownItAnchor, markdownItFootnote],
+  markdownOptions: { breaks: true },
+});
+```
+
+Plugins are applied in array order, once, when the service initialises.
+
+<Callout type="info">
+  You do **not** need a plugin for Mermaid. Fenced `mermaid` blocks are handled by the library
+  itself — see [Mermaid diagrams](/docs/guides/mermaid).
+</Callout>
+
+## Components
+
+`components` and `componentModules` both register Custom Elements at bootstrap, for the whole
+application. Their per-instance counterparts are inputs on
+[`MarkdownComponent`](/docs/guides/markdown-component), and the trade-offs between the two are
+covered in [Embedding Angular components](/docs/guides/embedding-components).
+
+<Callout type="warn">
+  `provideMarkdown({ componentModules })` registers **every** component a module exports — it has no
+  document to inspect. The `[componentModules]` input registers only the selectors the document
+  actually uses. That difference matters; see
+  [Only what the page uses](/docs/guides/embedding-components#only-what-the-page-uses).
+</Callout>

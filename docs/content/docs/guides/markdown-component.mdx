@@ -1,0 +1,127 @@
+---
+title: MarkdownComponent
+description: The <shikidown> component — inputs, rendering states, and per-instance component registration.
+---
+
+`MarkdownComponent` is the default way to display a Markdown document. It is standalone, uses
+`OnPush` change detection, and is the only integration point that supports
+[incremental rendering](/docs/guides/incremental-rendering).
+
+```typescript
+import { MarkdownComponent } from 'shikidown';
+
+@Component({
+  imports: [MarkdownComponent],
+  template: `<shikidown [content]="md" class="prose dark:prose-invert max-w-none" />`,
+})
+export class MyComponent {
+  readonly md = '# Hello';
+}
+```
+
+The host element carries `class="block"`, and any class you add lands beside it — which is where
+your typography goes, since the library ships no styles.
+
+## Inputs
+
+<TypeTable
+  type={{
+    content: {
+      description: 'The Markdown source to render.',
+      type: 'string',
+      default: "''",
+    },
+    components: {
+      description: 'Angular components registered as Custom Elements for this instance, merged with those declared in provideMarkdown(). Registration is idempotent.',
+      type: 'Record<string, Type<unknown>>',
+      default: '{}',
+    },
+    componentModules: {
+      description: 'Modules whose components are registered for this instance, selectors read from their decorators. Accepts () => import(…) loaders, and only registers selectors the document actually uses.',
+      type: 'ComponentModuleSource[]',
+      default: '[]',
+    },
+  }}
+/>
+
+There are no outputs.
+
+## Rendering states
+
+The component renders one of four things, in this order:
+
+<Steps>
+
+<Step>
+
+**Loading** — a pulsing skeleton, shown only on the *first* render. Once a document has been
+rendered, subsequent updates keep the previous output on screen rather than falling back to the
+skeleton.
+
+</Step>
+
+<Step>
+
+**Error** — a red panel carrying the message, if parsing threw.
+
+</Step>
+
+<Step>
+
+**Incremental output** — one `<div [innerHTML]>` per root block, tracked by content hash.
+
+</Step>
+
+<Step>
+
+**Standard output** — a single `<div [innerHTML]>` holding the whole document.
+
+</Step>
+
+</Steps>
+
+<Callout type="info">
+  The skeleton and error panel are styled with Tailwind utility classes (`animate-pulse`,
+  `bg-gray-200`, `text-red-700`…). Without Tailwind they still render — as unstyled boxes.
+</Callout>
+
+## Per-instance component registration
+
+Components passed through `[components]` are registered for the browser globally — there is no
+such thing as a scoped Custom Element — but you only have to *declare* them where they are used:
+
+```html
+<shikidown [content]="md" [components]="{ 'local-chart': ChartComponent }" />
+```
+
+`customElements.define()` is called at most once per selector, however many instances mount, so
+repeating a selector across templates is harmless.
+
+The trade-offs between declaring components here and declaring them in `provideMarkdown()` are
+laid out in [Embedding Angular components](/docs/guides/embedding-components#global-vs-local-registration).
+
+## Content security
+
+The rendered HTML is passed through `DomSanitizer.bypassSecurityTrustHtml`. This is deliberate:
+sanitising would strip the very Custom Elements the library exists to render, along with Shiki's
+inline colour styles.
+
+<Callout type="warn">
+  **Markdown is treated as trusted input.** Do not feed `[content]` with text submitted by
+  untrusted users unless you sanitise it yourself first — `html: true` is on by default, so raw
+  HTML in the source reaches the DOM.
+</Callout>
+
+## Server-side rendering
+
+Custom Element registration is guarded by `isPlatformBrowser`, and Shiki is only imported in the
+browser. On the server the document renders with its structure intact but without highlighting and
+without live components; both appear on hydration.
+
+## See also
+
+<Cards>
+  <Card title="MarkdownPipe" href="/docs/guides/markdown-pipe" description="When you need the HTML rather than a component." />
+  <Card title="Incremental rendering" href="/docs/guides/incremental-rendering" description="What the block pipeline buys you." />
+  <Card title="Lazy-loaded components" href="/docs/guides/lazy-loading" description="Keeping a page's components out of the initial bundle." />
+</Cards>

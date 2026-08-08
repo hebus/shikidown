@@ -42,3 +42,10 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# Documentation site (docs/) — Next.js build artefacts and the demo build copied in before it
+/docs/node_modules
+/docs/.next
+/docs/.source
+/docs/out
+/docs/public/demo

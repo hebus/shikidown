@@ -1,4 +1,4 @@
-name: Deploy Demo to GitHub Pages
+name: Deploy docs + demo to GitHub Pages
 
 on:
   push:
@@ -16,30 +16,56 @@ concurrency:
 
 jobs:
   build:
-    name: Build demo app
+    name: Build documentation site
     runs-on: ubuntu-latest
+    env:
+      # Project pages are served from https://<user>.github.io/<repo>/ — Next.js rejects a trailing slash.
+      SITE_BASE_PATH: /${{ github.event.repository.name }}
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
+          # Fumadocs requires Node 22+.
           node-version: '22'
           cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            docs/package-lock.json
 
-      - name: Install dependencies
+      # The Angular demo is served from `<site>/demo/`. It must be built first: Next.js copies
+      # `docs/public/` verbatim into `docs/out/` while it builds.
+      - name: Install demo dependencies
         run: npm ci
 
       - name: Build demo app
-        run: npx ng build --configuration production --base-href /${{ github.event.repository.name }}/
+        run: npx ng build markdown-shiki-renderer --configuration production --base-href ${{ env.SITE_BASE_PATH }}/demo/
 
-      - name: Add 404.html for SPA routing
-        run: cp dist/markdown-shiki-renderer/browser/index.html dist/markdown-shiki-renderer/browser/404.html
+      - name: Stage demo into the documentation site
+        run: |
+          rm -rf docs/public/demo
+          cp -r dist/markdown-shiki-renderer/browser docs/public/demo
+
+      - name: Install documentation dependencies
+        run: npm ci
+        working-directory: docs
+
+      - name: Build documentation site
+        run: npm run build
+        working-directory: docs
+        env:
+          NEXT_PUBLIC_BASE_PATH: ${{ env.SITE_BASE_PATH }}
+
+      # `_next/` would be dropped by Jekyll. The artifact deployment does not run Jekyll, but this
+      # keeps the output serveable should the Pages source ever change.
+      - name: Add .nojekyll
+        run: touch docs/out/.nojekyll
 
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist/markdown-shiki-renderer/browser
+          path: docs/out
 
   deploy:
     name: Deploy to GitHub Pages

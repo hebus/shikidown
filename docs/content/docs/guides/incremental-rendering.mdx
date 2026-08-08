@@ -1,0 +1,145 @@
+---
+title: Incremental rendering
+description: Re-parse only the blocks whose source changed, and keep the DOM — and the state of embedded components — for everything else.
+---
+
+By default, every change to `[content]` re-parses the whole document and replaces the whole DOM
+subtree. That is fine for a document you display once. It is not fine for a live editor: at every
+keystroke Shiki re-highlights every fence, the browser rebuilds every node, and every embedded
+component is destroyed and recreated — counters reset, scroll positions jump, focus is lost.
+
+Turn it on in the provider:
+
+```typescript title="app.config.ts"
+provideMarkdown({ incrementalRendering: true });
+```
+
+<Callout type="info">
+  This affects [`MarkdownComponent`](/docs/guides/markdown-component) only.
+  [`MarkdownPipe`](/docs/guides/markdown-pipe) always renders whole documents.
+</Callout>
+
+## What changes
+
+| | Without | With |
+|---|---|---|
+| Shiki re-highlighting | Every block, every time | Only changed blocks |
+| DOM mutation | Full replacement | Only changed block nodes |
+| Embedded component state | Lost | Preserved in unchanged blocks |
+
+## How it works
+
+<Mermaid chart={`
+flowchart TD
+  A[Content change] --> B[md.parse]
+  B --> C["Token grouping<br/>(depth count on token.nesting)"]
+  C --> D["blocks[]"]
+  D --> E["FNV-1a hash(block.source)"]
+  E --> F{Hash in LRU cache?}
+  F -- yes --> G[Reuse cached HTML]
+  F -- no --> H[Shiki highlights,<br/>result cached]
+  G --> I["@for track block.hash"]
+  H --> I
+  I --> J{Same SafeHtml reference?}
+  J -- yes --> K[Angular skips the innerHTML write<br/>DOM untouched]
+  J -- no --> L[innerHTML updated<br/>DOM replaced]
+`} />
+
+Four mechanisms compose here, and each one matters:
+
+<Steps>
+
+<Step>
+
+### Splitting into root blocks
+
+`groupTokensToBlocks()` walks the flat token array markdown-it produces and counts nesting depth:
+an opening token collects tokens until its matching close, a self-closing token becomes a block on
+its own. It is O(n) and looks only at `token.nesting`, never at the token *type* — which is what
+makes it agnostic to whatever plugins you added.
+
+Each block records the source lines it came from, so its identity can be computed from text alone.
+
+</Step>
+
+<Step>
+
+### Hashing the source
+
+Each block's raw source text is hashed with FNV-1a (32-bit, hex). The hash is the block's identity:
+same text, same hash, regardless of where it moved in the document.
+
+</Step>
+
+<Step>
+
+### The LRU cache
+
+Rendered HTML is stored per hash in a `Map` used as a simple LRU — insertion-ordered, oldest entry
+evicted when full. Capacity is `blockCacheSize`, 256 by default, and the cache is shared by every
+`MarkdownComponent` instance because it lives on the singleton service.
+
+</Step>
+
+<Step>
+
+### Stable `SafeHtml` references
+
+This is the step that actually saves the DOM. The component keeps a per-hash cache of `SafeHtml`
+objects, so an unchanged block yields the *same object reference* as last time. Angular's
+`[innerHTML]` binding compares by reference, sees no change, and skips the write entirely — the
+existing nodes, and any Custom Element state they hold, are never touched.
+
+The template tracks by hash (`@for (block of displayedBlocks(); track block.hash)`), so blocks are
+also reordered rather than rebuilt when you move a paragraph.
+
+</Step>
+
+</Steps>
+
+## No flicker while re-parsing
+
+Parsing is asynchronous, but the component does not blank out while it runs: the last successfully
+rendered blocks stay on screen, and are replaced only when the new render resolves. The loading
+skeleton appears on the very first render only.
+
+## Clearing the cache
+
+The cache is keyed on source text alone — it knows nothing about the theme. Changing the Shiki
+theme at runtime therefore leaves stale colours in every cached block. Flush it:
+
+```typescript
+import { MarkdownService } from 'shikidown';
+
+@Component({ /* … */ })
+export class ThemeSwitcher {
+  private readonly md = inject(MarkdownService);
+
+  switchTheme(): void {
+    // update your theme configuration…
+    this.md.clearCache();
+  }
+}
+```
+
+<Callout type="warn">
+  This is only needed for a **runtime theme change**, not for a dark/light toggle. With a
+  `{ dark, light }` theme pair, both colour sets are already in the rendered HTML and switching is
+  pure CSS — see [Styling and dark mode](/docs/guides/styling-dark-mode).
+</Callout>
+
+## Tuning the cache
+
+`blockCacheSize` bounds memory, not correctness: a document larger than the cache still renders,
+it just stops getting cache hits on its oldest blocks. Raise it if you render long documents.
+
+```typescript
+provideMarkdown({ incrementalRendering: true, blockCacheSize: 512 });
+```
+
+## See also
+
+<Cards>
+  <Card title="MarkdownService" href="/docs/api/markdown-service" description="parseBlocksAsync() and clearCache()." />
+  <Card title="ParsedBlock / RenderedBlock" href="/docs/api/types#parsedblock" description="The block shapes, if you drive the pipeline yourself." />
+</Cards>

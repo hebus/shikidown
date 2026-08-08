@@ -1,0 +1,144 @@
+---
+title: MarkdownService
+description: The root-provided service behind the component and the pipe — use it directly for headless rendering.
+---
+
+`MarkdownService` is `@Injectable({ providedIn: 'root' })`. It owns the markdown-it instance, the
+Shiki highlighter and the block cache — which is why the cache is shared by every
+`MarkdownComponent` in the application.
+
+Inject it when you need HTML outside a template: pre-rendering, a custom pipe, a report generator,
+an export to email.
+
+```typescript
+import { MarkdownService, type RenderedBlock } from 'shikidown';
+
+@Injectable({ providedIn: 'root' })
+export class ContentService {
+  private readonly md = inject(MarkdownService);
+
+  async toHtml(markdown: string): Promise<string> {
+    return this.md.parseAsync(markdown);
+  }
+
+  async toBlocks(markdown: string): Promise<RenderedBlock[]> {
+    return this.md.parseBlocksAsync(markdown);
+  }
+}
+```
+
+## Methods
+
+| Method | Signature | Description |
+|---|---|---|
+| [`initialize`](#initialize) | `() => Promise<void>` | Loads Shiki and builds the markdown-it instance. |
+| [`parseAsync`](#parseasync) | `(content: string) => Promise<string>` | Renders the whole document, returns raw HTML. |
+| [`parse`](#parse) | `(content: string) => string` | Synchronous render. Throws before initialisation. |
+| [`parseBlocksAsync`](#parseblocksasync) | `(content: string) => Promise<RenderedBlock[]>` | Renders as independent blocks, with LRU caching. |
+| [`clearCache`](#clearcache) | `() => void` | Empties the block cache. |
+
+---
+
+### initialize
+
+```typescript
+initialize(): Promise<void>
+```
+
+Dynamically imports Shiki, creates the highlighter with the configured themes and languages, builds
+the markdown-it instance, applies your plugins and installs the `mermaid` fence rule.
+
+Idempotent, and safe to call concurrently — the promise is memoised, so parallel callers share one
+initialisation. Every async method calls it for you; you only need it explicitly before
+[`parse()`](#parse).
+
+<Callout type="info">
+  **In a server environment no highlighter is created.** The document still renders, with code
+  fences emitted as plain `<pre class="shiki"><code>` blocks.
+</Callout>
+
+---
+
+### parseAsync
+
+```typescript
+parseAsync(content: string): Promise<string>
+```
+
+Renders the whole document and returns raw HTML — a `string`, not `SafeHtml`. Binding it to
+`[innerHTML]` yourself means going through `DomSanitizer`; sanitising will strip embedded Custom
+Elements and Shiki's inline styles, so use `bypassSecurityTrustHtml` and treat the source as
+trusted.
+
+---
+
+### parse
+
+```typescript
+parse(content: string): string
+```
+
+Synchronous render. **Throws** if the service has not finished initialising:
+
+```
+[shikidown] MarkdownService not initialized. Call parseAsync() first.
+```
+
+Use it in code that cannot be asynchronous, after awaiting [`initialize()`](#initialize) once:
+
+```typescript
+await this.md.initialize();
+const html = this.md.parse('# Now this is safe');
+```
+
+---
+
+### parseBlocksAsync
+
+```typescript
+parseBlocksAsync(content: string): Promise<RenderedBlock[]>
+```
+
+Splits the document into independent root blocks and renders each one, serving unchanged blocks
+from the LRU cache. This is what `MarkdownComponent` calls in incremental mode.
+
+Each [`RenderedBlock`](/docs/api/types#renderedblock) carries the FNV-1a hash of its source text and
+its raw HTML. The hash is a stable identity: use it as the tracking key if you drive your own
+rendering loop.
+
+```typescript
+const blocks = await this.md.parseBlocksAsync(markdown);
+// [{ hash: '1f4a3b2c', html: '<h1>Title</h1>\n' }, …]
+```
+
+See [Incremental rendering](/docs/guides/incremental-rendering) for what the pipeline buys you and
+how to keep the DOM stable across renders.
+
+---
+
+### clearCache
+
+```typescript
+clearCache(): void
+```
+
+Empties the block cache. Needed after a **runtime theme change**, since blocks are keyed on source
+text alone and would otherwise keep their old colours.
+
+```typescript
+this.md.clearCache();
+```
+
+A dark/light toggle does not require this: with a `{ dark, light }` theme pair both colour sets are
+already present in the rendered HTML.
+
+## Defaults
+
+Values used when `provideMarkdown()` is absent, or when an option is not set:
+
+| | Default |
+|---|---|
+| Theme | `{ dark: 'github-dark', light: 'poimandres' }` |
+| Languages | 16 common languages — see [Configuration](/docs/configuration#languages) |
+| markdown-it options | `{ html: true, linkify: true, typographer: true }` |
+| Block cache capacity | `256` |

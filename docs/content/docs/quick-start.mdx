@@ -1,0 +1,152 @@
+---
+title: Quick start
+description: From an empty Angular project to a rendered document with a live Angular component inside it.
+---
+
+<Steps>
+
+<Step>
+
+### Register the provider
+
+`provideMarkdown()` returns `EnvironmentProviders`, so it goes in the `providers` array of your
+application config.
+
+```typescript title="app.config.ts"
+import { ApplicationConfig } from '@angular/core';
+import { provideMarkdown } from 'shikidown';
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideMarkdown({
+      theme: { dark: 'github-dark', light: 'catppuccin-latte' },
+    }),
+  ],
+};
+```
+
+Every option has a default, so an empty call works too. See [Configuration](/docs/configuration)
+for the full list.
+
+</Step>
+
+<Step>
+
+### Render a document
+
+Import `MarkdownComponent` and give it some Markdown.
+
+```typescript title="docs-page.ts"
+import { Component } from '@angular/core';
+import { MarkdownComponent } from 'shikidown';
+
+@Component({
+  selector: 'app-docs-page',
+  imports: [MarkdownComponent],
+  template: `<shikidown [content]="md" class="prose dark:prose-invert max-w-none" />`,
+})
+export class DocsPage {
+  readonly md = `# Hello
+
+This is **shikidown**.
+
+\`\`\`typescript
+const answer: number = 42;
+\`\`\`
+`;
+}
+```
+
+The `class` lands on the host element. shikidown ships no styles of its own, so this is where you
+attach your typography — see [Styling and dark mode](/docs/guides/styling-dark-mode).
+
+</Step>
+
+<Step>
+
+### Put a component in the Markdown
+
+Register a component against a selector, then write that selector in the document.
+
+```typescript title="counter.ts"
+import { Component, input, numberAttribute, signal } from '@angular/core';
+
+@Component({
+  selector: 'my-counter',
+  template: `<button (click)="count.set(count() + 1)">{{ label() }}: {{ count() }}</button>`,
+})
+export class CounterComponent {
+  readonly initialCount = input(0, { transform: numberAttribute });
+  readonly label = input('Clicks');
+  readonly count = signal(0);
+
+  constructor() {
+    this.count.set(this.initialCount());
+  }
+}
+```
+
+```typescript title="app.config.ts"
+provideMarkdown({
+  components: { 'my-counter': CounterComponent },
+});
+```
+
+```markdown title="the document"
+# My page
+
+<my-counter initial-count="5" label="Votes"></my-counter>
+```
+
+The rendered counter is a real Angular component: it has its own state, its own change detection,
+and its inputs are fed from the HTML attributes. Note the `kebab-case` attribute mapping to the
+`camelCase` input — the browser does that for you, and it is covered in
+[Embedding Angular components](/docs/guides/embedding-components).
+
+</Step>
+
+<Step>
+
+### Turn on incremental rendering
+
+If the document changes as the user types — an editor, a live preview — enable incremental
+rendering so only the edited block is re-processed.
+
+```typescript title="app.config.ts"
+provideMarkdown({
+  incrementalRendering: true,
+});
+```
+
+Unchanged blocks keep their DOM nodes, which means the counter above does **not** reset when you
+edit an unrelated paragraph. See [Incremental rendering](/docs/guides/incremental-rendering) for
+how that works.
+
+</Step>
+
+</Steps>
+
+## Where to go next
+
+<Cards>
+  <Card
+    title="Configuration"
+    href="/docs/configuration"
+    description="Themes, languages, markdown-it plugins, cache size."
+  />
+  <Card
+    title="Embedding components"
+    href="/docs/guides/embedding-components"
+    description="Whole-module registration, attribute mapping, and the pitfalls of a global registry."
+  />
+  <Card
+    title="MarkdownPipe"
+    href="/docs/guides/markdown-pipe"
+    description="When you need the HTML rather than a component."
+  />
+  <Card
+    title="Mermaid diagrams"
+    href="/docs/guides/mermaid"
+    description="Render fenced mermaid blocks as SVG."
+  />
+</Cards>

@@ -1,0 +1,154 @@
+---
+title: Types
+description: Every type exported from the shikidown entry point.
+---
+
+```typescript
+import type {
+  MarkdownConfig,
+  MarkdownThemePair,
+  ComponentModule,
+  ComponentModuleSource,
+  ParsedBlock,
+  RenderedBlock,
+} from 'shikidown';
+```
+
+---
+
+## MarkdownConfig
+
+The object accepted by [`provideMarkdown()`](/docs/api/provide-markdown). Every field is optional.
+
+```typescript
+interface MarkdownConfig {
+  theme?: StringLiteralUnion<BundledTheme> | MarkdownThemePair;
+  languages?: StringLiteralUnion<BundledLanguage>[];
+  components?: Record<string, Type<unknown>>;
+  componentModules?: ComponentModuleSource[];
+  plugins?: Array<(md: MarkdownIt) => void>;
+  markdownOptions?: MarkdownItOptions;
+  incrementalRendering?: boolean;
+  blockCacheSize?: number;
+}
+```
+
+`theme` and `languages` reuse Shiki's own `StringLiteralUnion` types, so you get the bundled names
+as autocomplete suggestions while still being able to pass a custom one. Field-by-field defaults are
+in [Configuration](/docs/configuration#options).
+
+<Callout type="info">
+  `MarkdownItOptions` — `html`, `xhtmlOut`, `breaks`, `langPrefix`, `linkify`, `typographer`,
+  `quotes` — is an internal type, not exported. Pass an object literal and TypeScript will check it
+  structurally.
+</Callout>
+
+---
+
+## MarkdownThemePair
+
+```typescript
+interface MarkdownThemePair {
+  dark: StringLiteralUnion<BundledTheme>;
+  light: StringLiteralUnion<BundledTheme>;
+}
+```
+
+Passing a pair rather than a single string makes Shiki emit **both** themes in one pass — light as
+inline styles, dark as `--shiki-dark-*` CSS variables. See
+[Dual-theme code blocks](/docs/guides/styling-dark-mode#dual-theme-code-blocks).
+
+---
+
+## ComponentModule
+
+```typescript
+type ComponentModule = Record<string, unknown>;
+```
+
+A module that exports components. Exports which are not components are ignored, so this is
+deliberately as loose as `import * as demos from './demos'` really is.
+
+---
+
+## ComponentModuleSource
+
+```typescript
+type ComponentModuleSource = ComponentModule | (() => Promise<ComponentModule>);
+```
+
+Either an already-imported module, or a loader that returns one. The loader form is what keeps a
+page's components out of the initial bundle:
+
+```typescript
+const sources: ComponentModuleSource[] = [
+  demos,                              // eager
+  () => import('./page.demos'),       // lazy
+];
+```
+
+See [Lazy-loaded components](/docs/guides/lazy-loading).
+
+---
+
+## ParsedBlock
+
+```typescript
+interface ParsedBlock {
+  readonly hash: string;
+  readonly startLine: number;
+  readonly endLine: number;
+  readonly tokens: MdToken[];
+  readonly source: string;
+}
+```
+
+A group of consecutive markdown-it tokens forming one self-contained root block.
+
+| Field | Meaning |
+|---|---|
+| `hash` | FNV-1a hash of `source`, hex — the block's stable identity |
+| `startLine` | 0-based, **inclusive** |
+| `endLine` | 0-based, **exclusive** |
+| `tokens` | The token subset to hand to `md.renderer.render()` |
+| `source` | Raw source text, used as the cache key |
+
+`ParsedBlock` is an intermediate shape: no public method returns it. It is exported so you can type
+your own token-level tooling.
+
+---
+
+## RenderedBlock
+
+```typescript
+interface RenderedBlock {
+  readonly hash: string;
+  readonly html: string;
+}
+```
+
+What [`parseBlocksAsync()`](/docs/api/markdown-service#parseblocksasync) returns. `html` is a raw
+string, **not** `SafeHtml` — sanitisation is the caller's decision.
+
+Use `hash` as the tracking key when rendering the list yourself:
+
+```html
+@for (block of blocks(); track block.hash) {
+  <div [innerHTML]="block.html"></div>
+}
+```
+
+---
+
+## Not exported
+
+Some symbols are visible in the source but deliberately kept out of the public API. They are listed
+here so you do not go looking for them.
+
+| Symbol | Why |
+|---|---|
+| `MARKDOWN_CONFIG` | Injection token, an implementation detail. Configure through `provideMarkdown()`. |
+| `MARKDOWN_COMPONENTS` | Provided by `provideMarkdown()` but not read anywhere — treat it as absent. |
+| `MarkdownItOptions` | Structural type; pass an object literal instead. |
+| `MdToken` | Alias of markdown-it's own token type — import it from `markdown-it`. |
+| `hashSource()` | The FNV-1a helper. Block hashes are already exposed on `ParsedBlock` and `RenderedBlock`. |

@@ -1,5 +1,10 @@
 import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
-import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
+import {
+  provideRouter,
+  withComponentInputBinding,
+  withHashLocation,
+  withInMemoryScrolling,
+} from '@angular/router';
 import { provideMarkdown } from 'shikidown';
 import { copyCodePlugin } from './copy-code.plugin';
 import markdownItKatex from '@vscode/markdown-it-katex';
@@ -12,7 +17,15 @@ import { DemoPipeComponent } from '../components/demo-pipe/demo-pipe';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideRouter(routes, withComponentInputBinding(), withInMemoryScrolling({ anchorScrolling: 'enabled' })),
+    // Hash routing: the demo is served from `<site>/demo/`, and GitHub Pages only ever falls back
+    // to the 404.html sitting at the root of the site — which belongs to the documentation. Without
+    // it, reloading or sharing a deep link such as /demo/playground would land on the docs' 404.
+    provideRouter(
+      routes,
+      withHashLocation(),
+      withComponentInputBinding(),
+      withInMemoryScrolling({ anchorScrolling: 'enabled' }),
+    ),
     provideMarkdown({
       plugins: [copyCodePlugin, markdownItKatex],
       theme: { dark: 'github-dark', light: "catppuccin-latte" },

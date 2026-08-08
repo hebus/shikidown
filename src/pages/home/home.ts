@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { MarkdownComponent } from 'shikidown';
 import { MermaidDirective } from 'shikidown/mermaid';
 import { LanguageService } from '../../services/language.service';
+import { siteLinks } from '../../app/site-links';
 
 const HERO_MD: Record<'fr' | 'en', string> = {
   fr: `
@@ -185,9 +186,9 @@ const FEATURES_CARDS: Record<'fr' | 'en', Array<{ icon: string; title: string; d
   ],
 };
 
-const UI: Record<'fr' | 'en', { start: string; quickstart: string }> = {
-  fr: { start: 'Démarrer →', quickstart: 'Démarrage rapide' },
-  en: { start: 'Get started →', quickstart: 'Quick start' },
+const UI: Record<'fr' | 'en', { start: string; quickstart: string; docs: string }> = {
+  fr: { start: 'Démarrer →', quickstart: 'Démarrage rapide', docs: 'Documentation' },
+  en: { start: 'Get started →', quickstart: 'Quick start', docs: 'Documentation' },
 };
 
 @Component({
@@ -219,6 +220,10 @@ const UI: Record<'fr' | 'en', { start: string; quickstart: string }> = {
             routerLink="/playground"
             class="rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 px-5 py-2.5 text-sm font-semibold transition-colors"
           >Playground</a>
+          <a
+            [href]="links.docs"
+            class="rounded-lg px-5 py-2.5 text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+          >{{ ui().docs }} <span aria-hidden="true">↗</span></a>
         </div>
       </section>
 
@@ -256,6 +261,9 @@ const UI: Record<'fr' | 'en', { start: string; quickstart: string }> = {
 })
 export class HomeComponent {
   private readonly langService = inject(LanguageService);
+
+  /** Absolute link to the documentation site the demo is published alongside. */
+  readonly links = siteLinks();
 
   readonly lang = this.langService.lang;
   readonly heroMd    = computed(() => HERO_MD[this.lang()]);

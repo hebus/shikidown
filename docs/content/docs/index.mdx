@@ -1,0 +1,107 @@
+---
+title: Introduction
+description: An Angular Markdown renderer built on Shiki and markdown-it, with Angular components embedded by selector and incremental block rendering.
+---
+
+**shikidown** renders Markdown in an Angular application. It is a thin, opinionated layer over
+[markdown-it](https://markdown-it.github.io) and [Shiki](https://shiki.style) that adds the two
+things a Markdown renderer usually leaves to you: putting live Angular components inside the
+document, and re-rendering it cheaply when the source changes.
+
+## What it does
+
+<Cards>
+  <Card
+    title="Shiki v4 highlighting"
+    description="IDE-quality syntax colours. A dark and a light theme are emitted at once and switched through CSS variables, so toggling the theme costs no re-highlighting."
+  />
+  <Card
+    title="Angular components by selector"
+    description="Register a component, then write its selector in the Markdown. Each one is wrapped in a standard Custom Element through @angular/elements."
+  />
+  <Card
+    title="Incremental block rendering"
+    description="Only the blocks whose source text changed are re-parsed. Unchanged DOM nodes are kept, so embedded component state survives every keystroke."
+  />
+  <Card
+    title="Mermaid diagrams"
+    description="Fenced mermaid blocks are recognised natively. Rendering lives behind a separate entry point, so the mermaid package never enters your bundle unless you ask for it."
+  />
+</Cards>
+
+## Three ways in
+
+The library exposes one component, one pipe and one service. Which one you reach for depends on
+what you are building.
+
+| | Use it when | Incremental rendering |
+|---|---|---|
+| [`MarkdownComponent`](/docs/guides/markdown-component) | You are displaying a document. This is the default choice. | Yes |
+| [`MarkdownPipe`](/docs/guides/markdown-pipe) | You need the HTML inside a template you already control. | No |
+| [`MarkdownService`](/docs/api/markdown-service) | You need the HTML outside a template — pre-rendering, a custom pipe, a report generator. | n/a |
+
+## A complete example
+
+```typescript title="app.config.ts"
+import { provideMarkdown } from 'shikidown';
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideMarkdown({
+      theme: { dark: 'github-dark', light: 'catppuccin-latte' },
+      components: { 'my-counter': CounterComponent },
+    }),
+  ],
+};
+```
+
+```typescript title="docs-page.ts"
+import { MarkdownComponent } from 'shikidown';
+
+@Component({
+  imports: [MarkdownComponent],
+  template: `<shikidown [content]="md" class="prose dark:prose-invert max-w-none" />`,
+})
+export class DocsPage {
+  readonly md = `# Hello\n\n<my-counter initial-count="5"></my-counter>`;
+}
+```
+
+That is the whole setup. The counter in the Markdown is a real Angular component, with its own
+state and change detection.
+
+## Where to go next
+
+<Cards>
+  <Card
+    title="Installation"
+    href="/docs/installation"
+    description="Packages, peer dependencies, and the optional mermaid entry point."
+  />
+  <Card
+    title="Quick start"
+    href="/docs/quick-start"
+    description="From an empty Angular project to a rendered document."
+  />
+  <Card
+    title="Configuration"
+    href="/docs/configuration"
+    description="Every option accepted by provideMarkdown(), with its default."
+  />
+  <Card
+    title="Embedding components"
+    href="/docs/guides/embedding-components"
+    description="How selectors are registered, and what to watch out for."
+  />
+</Cards>
+
+## Requirements
+
+shikidown targets **Angular 22 and above**. It has no runtime dependencies of its own — everything
+it uses is a peer dependency you already declare, which keeps it out of your dependency graph
+twice over.
+
+<Callout type="info">
+  The library ships **no styles**. Typography is yours to bring; see
+  [Styling and dark mode](/docs/guides/styling-dark-mode) for the recommended setup.
+</Callout>

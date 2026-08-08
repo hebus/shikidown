@@ -1,0 +1,96 @@
+---
+title: Styling and dark mode
+description: Bring your own typography, and activate Shiki's dual-theme output with a handful of CSS rules.
+---
+
+shikidown ships **no default styles**. What it emits is semantic HTML — headings, paragraphs, lists,
+`<pre class="shiki">` blocks — and how that looks is entirely yours.
+
+## Typography
+
+The recommended approach is
+[Tailwind CSS Typography](https://github.com/tailwindlabs/tailwindcss-typography), applied on the
+host element:
+
+```html
+<shikidown [content]="md" class="prose prose-slate dark:prose-invert max-w-none" />
+```
+
+Nothing ties the library to Tailwind — any stylesheet scoped to the host works just as well. The
+rendered content is wrapped in a `.shikidown-content` div, which gives you a stable hook:
+
+```css
+.shikidown-content h2 { /* … */ }
+.shikidown-content pre { /* … */ }
+```
+
+## Dual-theme code blocks
+
+With a `{ dark, light }` [theme pair](/docs/configuration#themes), Shiki emits both colour sets in a
+single pass: the **light** theme as inline `style` attributes, the **dark** theme as
+`--shiki-dark-*` CSS variables on the same elements. Switching schemes is then a pure CSS operation
+— no re-highlighting, no flash, no cache to invalidate.
+
+You have to activate the dark values yourself:
+
+```css title="styles.css"
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+/* Class-based dark mode — toggle .dark on <html> */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Shiki dual-theme: light colours are inline; dark ones live in --shiki-dark-*. */
+.dark .shiki {
+  background-color: var(--shiki-dark-bg) !important;
+}
+.dark .shiki span {
+  color: var(--shiki-dark) !important;
+  font-style: var(--shiki-dark-font-style) !important;
+  font-weight: var(--shiki-dark-font-weight) !important;
+  text-decoration: var(--shiki-dark-text-decoration) !important;
+}
+```
+
+<Callout type="info">
+  **Why `!important`?** Shiki applies the light theme as inline `style` attributes, which outrank
+  every selector. Overriding them from a stylesheet requires `!important` — there is no
+  specificity high enough otherwise.
+</Callout>
+
+If you use a single theme string instead of a pair, none of this applies: one colour set is emitted
+and it is used in both schemes.
+
+## Flash-free dark mode on load
+
+Apply the stored preference before the app bundle runs, or the page paints light first:
+
+```html title="index.html"
+<script>
+  (function () {
+    const stored = localStorage.getItem('dark');
+    const prefersDark =
+      stored === 'true' ||
+      (stored === null && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    if (prefersDark) document.documentElement.classList.add('dark');
+  })();
+</script>
+```
+
+The `dark` class on `<html>` is the convention the whole library follows —
+[`MermaidDirective`](/docs/guides/mermaid#dark-mode) watches that exact attribute to re-theme
+diagrams.
+
+## Component states
+
+Two pieces of shikidown's own markup carry Tailwind utility classes: the loading skeleton
+(`animate-pulse`, `bg-gray-200`, `dark:bg-gray-700`) and the error panel (`bg-red-50`,
+`text-red-700`…). With Tailwind present they look right out of the box; without it they degrade to
+plain boxes. If you need them styled differently, target them in your own stylesheet — or avoid
+them altogether by rendering through [`MarkdownService`](/docs/api/markdown-service).
+
+## Embedded components
+
+Components embedded in Markdown are Custom Elements, so **their styles are their own**. A component
+with `ViewEncapsulation.Emulated` — the default — keeps working exactly as it does anywhere else in
+your application. Your `prose` styles do not leak into it, and its styles do not leak out.

@@ -1,0 +1,88 @@
+---
+title: Installation
+description: Packages to install, peer dependencies to satisfy, and the optional mermaid entry point.
+---
+
+## Install
+
+```bash
+npm install shikidown shiki markdown-it
+npm install --save-dev @types/markdown-it
+```
+
+`shiki` and `markdown-it` are peer dependencies rather than dependencies: shikidown does not pin
+their versions, and you get exactly one copy of each in your bundle.
+
+## Peer dependencies
+
+| Package | Version | Required |
+|---|---|---|
+| `@angular/core` | `>=22.0.0` | Yes |
+| `@angular/common` | `>=22.0.0` | Yes |
+| `@angular/elements` | `>=22.0.0` | Yes |
+| `@angular/platform-browser` | `>=22.0.0` | Yes |
+| `markdown-it` | `>=14.0.0` | Yes |
+| `shiki` | `>=4.0.0` | Yes |
+| `mermaid` | `>=11.0.0` | Optional |
+
+The Angular packages are already present in any Angular 22 application, so in practice only `shiki`
+and `markdown-it` are new installs.
+
+<Callout type="warn">
+  `@angular/elements` is what turns your components into Custom Elements. It ships with Angular but
+  is **not** installed by `ng new` — add it if `provideMarkdown()` fails to resolve
+  `createCustomElement`.
+</Callout>
+
+## The mermaid entry point
+
+`mermaid` is heavy, and most documents never contain a diagram. It is therefore an *optional* peer
+dependency reached only through a secondary entry point:
+
+```bash
+npm install mermaid
+```
+
+```typescript
+import { MermaidDirective } from 'shikidown/mermaid';
+```
+
+If you never import from `shikidown/mermaid`, `mermaid` never enters your dependency graph — and
+fenced ` ```mermaid ` blocks simply stay rendered as code. See [Mermaid diagrams](/docs/guides/mermaid).
+
+## Verifying the install
+
+```typescript title="app.config.ts"
+import { provideMarkdown } from 'shikidown';
+
+export const appConfig: ApplicationConfig = {
+  providers: [provideMarkdown()],
+};
+```
+
+```typescript title="smoke-test.ts"
+import { MarkdownComponent } from 'shikidown';
+
+@Component({
+  imports: [MarkdownComponent],
+  template: `<shikidown content="# It works" />`,
+})
+export class SmokeTest {}
+```
+
+`provideMarkdown()` is optional — the library falls back to its defaults when the configuration
+token is absent. Calling it with no arguments, as above, is equivalent to not calling it at all;
+it is shown here because that is where you will add options next.
+
+## Server-side rendering
+
+shikidown is SSR-safe, with one caveat worth stating plainly: **Shiki is only loaded in the
+browser**. On the server, code fences are rendered as plain, unhighlighted `<pre><code>` blocks,
+and no Custom Element is defined. Highlighting appears once the client takes over.
+
+## Next steps
+
+<Cards>
+  <Card title="Quick start" href="/docs/quick-start" description="Render your first document." />
+  <Card title="Configuration" href="/docs/configuration" description="Themes, languages, plugins, caching." />
+</Cards>

@@ -2,6 +2,7 @@
 
 > Angular Markdown renderer with Shiki syntax highlighting, Angular component embedding, and incremental block rendering.
 
+[![Documentation](https://img.shields.io/badge/docs-shikidown-0969da)](https://hebus.github.io/shikidown/docs/)
 [![npm](https://img.shields.io/npm/v/shikidown?logo=npm&color=cb3837)](https://www.npmjs.com/package/shikidown)
 [![Changelog](https://img.shields.io/badge/changelog-releases-8957e5)](https://github.com/hebus/shikidown/releases)
 [![Angular](https://img.shields.io/badge/Angular-22-red?logo=angular)](https://angular.dev)
@@ -20,23 +21,28 @@
 
 ---
 
-## Table of contents
+## Documentation
 
-- [Installation](#installation)
-- [Quick start](#quick-start)
-- [Configuration](#configuration)
-- [MarkdownComponent](#markdowncomponent)
-- [MarkdownPipe](#markdownpipe)
-- [Embedding Angular components](#embedding-angular-components)
-  - [Registering whole modules](#registering-whole-modules)
-  - [Lazy-loaded components](#lazy-loaded-components)
-- [Incremental rendering](#incremental-rendering)
-- [Mermaid diagrams](#mermaid-diagrams)
-- [MarkdownService API](#markdownservice-api)
-- [Styles & dark mode](#styles--dark-mode)
-- [Exported types](#exported-types)
-- [Project structure](#project-structure)
-- [Changelog](#changelog)
+The reference documentation lives at **[hebus.github.io/shikidown/docs](https://hebus.github.io/shikidown/docs/)** —
+searchable, with a page per topic:
+
+| | |
+|---|---|
+| [Installation](https://hebus.github.io/shikidown/docs/installation) | Packages, peer dependencies, the mermaid entry point |
+| [Quick start](https://hebus.github.io/shikidown/docs/quick-start) | From an empty project to a rendered document |
+| [Configuration](https://hebus.github.io/shikidown/docs/configuration) | Every option, with its default |
+| [Embedding components](https://hebus.github.io/shikidown/docs/guides/embedding-components) | Selectors, attribute mapping, module registration |
+| [Lazy-loaded components](https://hebus.github.io/shikidown/docs/guides/lazy-loading) | Keeping a page's components out of the initial bundle |
+| [Incremental rendering](https://hebus.github.io/shikidown/docs/guides/incremental-rendering) | Block hashing, the LRU cache, DOM stability |
+| [Mermaid diagrams](https://hebus.github.io/shikidown/docs/guides/mermaid) | The `shikidown/mermaid` entry point |
+| [Styling & dark mode](https://hebus.github.io/shikidown/docs/guides/styling-dark-mode) | Typography and Shiki's dual-theme output |
+| [API reference](https://hebus.github.io/shikidown/docs/api/provide-markdown) | `provideMarkdown`, `MarkdownService`, exported types |
+
+A live demo — component showcase and Markdown playground — is at
+**[hebus.github.io/shikidown/demo/](https://hebus.github.io/shikidown/demo/)**.
+
+The rest of this file is a condensed version of the same material, kept here for readers arriving
+from npm.
 
 ---
 
@@ -51,10 +57,12 @@ npm install --save-dev @types/markdown-it
 
 | Package | Version |
 |---------|---------|
-| `@angular/core` | `^22.0.0` |
-| `@angular/elements` | `^22.0.0` |
-| `markdown-it` | `^14.0.0` |
-| `shiki` | `^4.0.0` |
+| `@angular/core` | `>=22.0.0` |
+| `@angular/common` | `>=22.0.0` |
+| `@angular/elements` | `>=22.0.0` |
+| `@angular/platform-browser` | `>=22.0.0` |
+| `markdown-it` | `>=14.0.0` |
+| `shiki` | `>=4.0.0` |
 
 > **Optional:** `mermaid` (`>=11`) is an *optional* peer dependency. Install it **only** if you
 > render diagrams — see [Mermaid diagrams](#mermaid-diagrams). It is loaded exclusively through
@@ -545,6 +553,10 @@ markdown-shiki-renderer/
 │       └── mermaid/             # Secondary entry point → import from 'shikidown/mermaid'
 │           └── src/
 │               └── mermaid.directive.ts    # MermaidDirective (dynamic import('mermaid'))
+├── docs/                        # Documentation site (Next.js + Fumadocs, static export)
+│   ├── content/docs/            # The MDX sources published at /docs
+│   ├── app/                     # Landing page, docs routes, static search index
+│   └── public/demo/             # Demo build, copied in by the deploy workflow
 └── src/                         # Demo application
     ├── pages/
     │   ├── home/                # Landing page
@@ -559,6 +571,29 @@ markdown-shiki-renderer/
     └── services/
         └── language.service.ts  # FR/EN language signal
 ```
+
+---
+
+## Local development
+
+The demo application and the documentation site are two independent projects, each with its own
+`package.json`, and they run side by side:
+
+```bash
+# Demo application → http://localhost:4200
+npm install
+npm start
+
+# Documentation site → http://localhost:3000
+cd docs
+npm install
+npm run dev
+```
+
+Both are deployed by a single GitHub Actions workflow: the demo is built first and copied into
+`docs/public/demo`, then the documentation site is exported statically and published to GitHub
+Pages. The documentation owns the root of the site; the demo is served from `/demo/` and uses hash
+routing, because GitHub Pages only falls back to the `404.html` at the root of a site.
 
 ---
 
