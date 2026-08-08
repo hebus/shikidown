@@ -2,6 +2,8 @@
 
 > Angular Markdown renderer with Shiki syntax highlighting, Angular component embedding, and incremental block rendering.
 
+[![npm](https://img.shields.io/npm/v/shikidown?logo=npm&color=cb3837)](https://www.npmjs.com/package/shikidown)
+[![Changelog](https://img.shields.io/badge/changelog-releases-8957e5)](https://github.com/hebus/shikidown/releases)
 [![Angular](https://img.shields.io/badge/Angular-22-red?logo=angular)](https://angular.dev)
 [![Shiki](https://img.shields.io/badge/Shiki-v4-blue)](https://shiki.style)
 [![markdown-it](https://img.shields.io/badge/markdown--it-14-green)](https://markdown-it.github.io)
@@ -34,6 +36,7 @@
 - [Styles & dark mode](#styles--dark-mode)
 - [Exported types](#exported-types)
 - [Project structure](#project-structure)
+- [Changelog](#changelog)
 
 ---
 
@@ -556,6 +559,18 @@ markdown-shiki-renderer/
     └── services/
         └── language.service.ts  # FR/EN language signal
 ```
+
+---
+
+## Changelog
+
+Each version is documented on the **[GitHub releases page](https://github.com/hebus/shikidown/releases)** — what changed, why, and the migration steps when there are any.
+
+| Version | Highlights |
+|---------|------------|
+| **[2.2.0](https://github.com/hebus/shikidown/releases/tag/v2.2.0)** | `[componentModules]` registers only the selectors the document actually uses |
+| **[2.1.0](https://github.com/hebus/shikidown/releases/tag/v2.1.0)** | `componentModules`: register by module, with optional lazy loading |
+| **[2.0.0](https://github.com/hebus/shikidown/releases/tag/v2.0.0)** | Mermaid moved to `shikidown/mermaid`; Angular 22 required |
 
 ---
 
