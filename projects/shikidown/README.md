@@ -590,6 +590,9 @@ npm install
 npm run dev
 ```
 
+They only become one site at build time, so while developing, the links between them point at each
+other's dev server rather than at the deployed paths.
+
 Both are deployed by a single GitHub Actions workflow: the demo is built first and copied into
 `docs/public/demo`, then the documentation site is exported statically and published to GitHub
 Pages. The documentation owns the root of the site; the demo is served from `/demo/` and uses hash

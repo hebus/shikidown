@@ -14,8 +14,9 @@ npm run dev     # http://localhost:3000
 ```
 
 The Angular demo application is developed separately, from the repository root (`npm start`, on
-port 4200). Links from the demo to the documentation resolve against the deployed base href, so
-they do not work under `ng serve` — that is expected.
+port 4200). The two sites only become one under `next build`, so in development the links between
+them point at each other's dev server — `lib/shared.ts` here, `src/app/site-links.ts` on the
+Angular side. Nothing to start in a particular order, and no dead links either way.
 
 ## Writing documentation
 

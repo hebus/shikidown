@@ -25,7 +25,15 @@ export const npmUrl = `https://www.npmjs.com/package/${gitConfig.repo}`;
 export const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
 /**
- * The Angular demo application. It is not a Next.js route: the demo is built separately and copied
- * into `public/demo` before `next build`, so it must be linked with a plain anchor.
+ * The Angular demo application.
+ *
+ * It is not a Next.js route: the demo is built separately and copied into `public/demo` before
+ * `next build`, so it must be linked with a plain anchor.
+ *
+ * In development that copy does not exist — it is gitignored, and the demo runs on its own dev
+ * server instead. `next dev` would also not resolve `/demo/` to `/demo/index.html`, since it serves
+ * `public/` without directory indexes. So the link points at `ng serve` while developing, and at
+ * the published copy everywhere else.
  */
-export const demoUrl = `${basePath}/demo/`;
+export const demoUrl =
+  process.env.NODE_ENV === 'development' ? 'http://localhost:4200/' : `${basePath}/demo/`;
