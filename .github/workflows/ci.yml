@@ -6,12 +6,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Minimal by default; the Pages jobs raise it for themselves.
 permissions:
   contents: read
-
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   verify:
@@ -21,6 +18,11 @@ jobs:
     # range unverified, which is exactly how 2.2.0 shipped uninstallable on v15.
     name: markdown-it ${{ matrix.markdown_it }}
     runs-on: ubuntu-latest
+    # Per-job rather than per-workflow: this one is safe to cancel, the deployment is not.
+    # The matrix value is part of the group, otherwise the two legs would cancel each other.
+    concurrency:
+      group: ci-${{ github.ref }}-${{ matrix.markdown_it }}
+      cancel-in-progress: true
     strategy:
       fail-fast: false
       matrix:
@@ -65,3 +67,86 @@ jobs:
       # noPropertyAccessFromIndexSignature, which v15 trips on renderer.rules.
       - name: Build demo
         run: npx ng build markdown-shiki-renderer --configuration production
+
+  build-docs:
+    name: Build documentation site
+    # Nothing reaches Pages until both markdown-it legs are green.
+    needs: verify
+    # A pull request builds nothing: deployment is for develop and manual runs only.
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    env:
+      # Project pages are served from https://<user>.github.io/<repo>/ — Next.js rejects a trailing slash.
+      SITE_BASE_PATH: /${{ github.event.repository.name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Fumadocs requires Node 22+.
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            docs/package-lock.json
+
+      # The Angular demo is served from `<site>/demo/`. It must be built first: Next.js copies
+      # `docs/public/` verbatim into `docs/out/` while it builds.
+      - name: Install demo dependencies
+        run: npm ci
+
+      - name: Build demo app
+        run: npx ng build markdown-shiki-renderer --configuration production --base-href ${{ env.SITE_BASE_PATH }}/demo/
+
+      # `docs/public/` is absent from a fresh checkout: the Fumadocs template never created it, and
+      # its only content is this gitignored copy. `cp` does not create the parent, hence `mkdir -p`.
+      - name: Stage demo into the documentation site
+        run: |
+          rm -rf docs/public/demo
+          mkdir -p docs/public
+          cp -r dist/markdown-shiki-renderer/browser docs/public/demo
+
+      - name: Install documentation dependencies
+        run: npm ci
+        working-directory: docs
+
+      - name: Build documentation site
+        run: npm run build
+        working-directory: docs
+        env:
+          NEXT_PUBLIC_BASE_PATH: ${{ env.SITE_BASE_PATH }}
+
+      # `_next/` would be dropped by Jekyll. The artifact deployment does not run Jekyll, but this
+      # keeps the output serveable should the Pages source ever change.
+      - name: Add .nojekyll
+        run: touch docs/out/.nojekyll
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/out
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build-docs
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    # Never cancel a deployment in flight — a half-published site is worse than a stale one.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
