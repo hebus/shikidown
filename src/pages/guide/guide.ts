@@ -120,6 +120,14 @@ est alors figée par votre lockfile, sans dépendance réseau externe :
 "styles": ["node_modules/katex/dist/katex.min.css", "src/styles.css"]
 \`\`\`
 
+Le plugin étant publié en CommonJS, le build signale \`Module '@vscode/markdown-it-katex'
+[...] is not ESM\`. Il n'existe pas d'alternative ESM maintenue : déclarez-le dans les
+options de build pour acquitter l'avertissement.
+
+\`\`\`json
+"allowedCommonJsDependencies": ["@vscode/markdown-it-katex", "katex"]
+\`\`\`
+
 Syntaxe dans le Markdown — formule inline avec \`$...$\` ou en bloc avec \`$$...$$\` :
 
 **Inline :** $E = mc^2$ — énergie-masse
@@ -504,6 +512,14 @@ is then pinned by your lockfile, with no external network dependency:
 
 \`\`\`json
 "styles": ["node_modules/katex/dist/katex.min.css", "src/styles.css"]
+\`\`\`
+
+The plugin ships as CommonJS, so the build reports \`Module '@vscode/markdown-it-katex'
+[...] is not ESM\`. No maintained ESM alternative exists, so acknowledge it in your
+build options.
+
+\`\`\`json
+"allowedCommonJsDependencies": ["@vscode/markdown-it-katex", "katex"]
 \`\`\`
 
 Markdown syntax — inline with \`$...$\` or block with \`$$...$$\`:

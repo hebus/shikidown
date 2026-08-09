@@ -169,6 +169,21 @@ export is unwrapped for you, which is the shape a CommonJS plugin arrives in.
   ignore its argument. The `load` key removes the ambiguity.
 </Callout>
 
+Most markdown-it plugins are published as CommonJS, so the build reports one warning per package:
+
+```
+▲ [WARNING] Module '@vscode/markdown-it-katex' used by 'src/app/app.config.ts' is not ESM
+  CommonJS or AMD dependencies can cause optimization bailouts.
+```
+
+Angular asks that you look for an ESM alternative first. When there is none, list the package under
+`allowedCommonJsDependencies` in the `build` options of `angular.json` to acknowledge it — deep
+imports of a listed package are covered too:
+
+```json
+"allowedCommonJsDependencies": ["@vscode/markdown-it-katex", "katex"]
+```
+
 <Callout type="info">
   You do **not** need a plugin for Mermaid. Fenced `mermaid` blocks are handled by the library
   itself — see [Mermaid diagrams](/docs/guides/mermaid).

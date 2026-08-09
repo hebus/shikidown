@@ -56,6 +56,24 @@
             "styles": [
               "node_modules/katex/dist/katex.min.css",
               "src/styles.css"
+            ],
+            // Acknowledged CommonJS dependencies. Angular asks that you first look for an
+            // ESM alternative; none of these have one we can reach.
+            //   mermaid pulls the first four transitively, and it is an optional peer we
+            //   load lazily — not ours to fix.
+            //   @vscode/markdown-it-katex is CommonJS, and it is the only KaTeX plugin for
+            //   markdown-it still maintained; every fork was abandoned between 2019 and 2022.
+            //   katex itself does ship ESM, but the plugin reaches it through require(), so
+            //   the CommonJS build is the one that gets resolved.
+            // Deep imports of a listed package are covered, which is what accounts for
+            // dayjs/plugin/*.js.
+            "allowedCommonJsDependencies": [
+              "@braintree/sanitize-url",
+              "@vscode/markdown-it-katex",
+              "cytoscape-cose-bilkent",
+              "cytoscape-fcose",
+              "dayjs",
+              "katex"
             ]
           },
           "configurations": {
