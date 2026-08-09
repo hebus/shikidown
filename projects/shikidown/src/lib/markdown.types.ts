@@ -1,7 +1,18 @@
 import type MarkdownIt from 'markdown-it';
 
+/**
+ * Instance markdown-it.
+ *
+ * L'export default ne se comporte pas de la même façon selon la version :
+ * en 14 c'est une `class` (donc utilisable directement comme type), en 15 c'est
+ * une `const` callable — une valeur pure, qui en position de type déclenche
+ * TS2749. `InstanceType<typeof …>` passe par la signature de construction, la
+ * seule forme commune aux deux.
+ */
+export type MarkdownItInstance = InstanceType<typeof MarkdownIt>;
+
 /** Token type derived from markdown-it's parse() return type. */
-export type MdToken = ReturnType<MarkdownIt['parse']>[number];
+export type MdToken = ReturnType<MarkdownItInstance['parse']>[number];
 
 /** Groupe de tokens markdown-it consécutifs formant un bloc racine autonome. */
 export interface ParsedBlock {

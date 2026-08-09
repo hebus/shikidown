@@ -4,7 +4,7 @@ import MarkdownIt from 'markdown-it';
 import type { BundledTheme, Highlighter, StringLiteralUnion } from 'shiki';
 import { MARKDOWN_CONFIG } from './markdown.tokens';
 import type { MarkdownConfig, MarkdownThemePair } from './markdown.config';
-import { type MdToken, type ParsedBlock, type RenderedBlock, hashSource } from './markdown.types';
+import { type MarkdownItInstance, type MdToken, type ParsedBlock, type RenderedBlock, hashSource } from './markdown.types';
 
 const DEFAULT_LANGUAGES = [
   'typescript', 'javascript', 'jsx', 'tsx',
@@ -31,7 +31,7 @@ export class MarkdownService {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly config: MarkdownConfig = inject(MARKDOWN_CONFIG, { optional: true }) ?? {};
 
-  private md: MarkdownIt | null = null;
+  private md: MarkdownItInstance | null = null;
   private highlighter: Highlighter | null = null;
   private initPromise: Promise<void> | null = null;
 
@@ -95,7 +95,7 @@ export class MarkdownService {
     });
 
     for (const plugin of this.config.plugins ?? []) {
-      (plugin as (md: MarkdownIt) => void)(this.md);
+      (plugin as (md: MarkdownItInstance) => void)(this.md);
     }
 
     // Mermaid fence: output a <pre class="mermaid"> placeholder so mermaid.run()

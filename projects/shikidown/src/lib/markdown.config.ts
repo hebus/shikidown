@@ -1,6 +1,6 @@
 import type { Type } from '@angular/core';
-import type MarkdownIt from 'markdown-it';
 import type { BundledLanguage, BundledTheme, StringLiteralUnion } from 'shiki';
+import type { MarkdownItInstance } from './markdown.types';
 
 /** Paire de thèmes Shiki pour dark/light mode */
 export interface MarkdownThemePair {
@@ -78,7 +78,7 @@ export interface MarkdownConfig {
    * provideMarkdown({ plugins: [markdownItAnchor, markdownItFootnote] })
    * ```
    */
-  plugins?: Array<(md: MarkdownIt) => void>;
+  plugins?: Array<(md: MarkdownItInstance) => void>;
   /** Options markdown-it personnalisées, fusionnées avec les défauts */
   markdownOptions?: MarkdownItOptions;
   /**
