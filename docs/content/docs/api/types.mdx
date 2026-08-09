@@ -6,6 +6,7 @@ description: Every type exported from the shikidown entry point.
 ```typescript
 import type {
   MarkdownConfig,
+  MarkdownItInstance,
   MarkdownThemePair,
   ComponentModule,
   ComponentModuleSource,
@@ -26,7 +27,7 @@ interface MarkdownConfig {
   languages?: StringLiteralUnion<BundledLanguage>[];
   components?: Record<string, Type<unknown>>;
   componentModules?: ComponentModuleSource[];
-  plugins?: Array<(md: MarkdownIt) => void>;
+  plugins?: Array<(md: MarkdownItInstance) => void>;
   markdownOptions?: MarkdownItOptions;
   incrementalRendering?: boolean;
   blockCacheSize?: number;
@@ -41,6 +42,33 @@ in [Configuration](/docs/configuration#options).
   `MarkdownItOptions` — `html`, `xhtmlOut`, `breaks`, `langPrefix`, `linkify`, `typographer`,
   `quotes` — is an internal type, not exported. Pass an object literal and TypeScript will check it
   structurally.
+</Callout>
+
+---
+
+## MarkdownItInstance
+
+The type of a markdown-it instance — what a `plugins` entry receives.
+
+```typescript
+type MarkdownItInstance = InstanceType<typeof MarkdownIt>;
+```
+
+Use it to type a plugin you write yourself:
+
+```typescript
+import type { MarkdownItInstance } from 'shikidown';
+
+function myPlugin(md: MarkdownItInstance): void {
+  md.use(/* … */);
+}
+```
+
+<Callout type="info">
+  Reach for this instead of markdown-it's default export. Across v14 and v15 that export is not the
+  same kind of symbol — a `class` in v14, a callable `const` in v15 — and only the latter fails when
+  used in type position (`TS2749: 'MarkdownIt' refers to a value, but is being used as a type
+  here`). `MarkdownItInstance` resolves correctly under both.
 </Callout>
 
 ---

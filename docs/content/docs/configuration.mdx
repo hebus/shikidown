@@ -64,7 +64,7 @@ provideMarkdown({
     },
     plugins: {
       description: 'markdown-it plugins, applied in order at initialisation.',
-      type: 'Array<(md: MarkdownIt) => void>',
+      type: 'Array<(md: MarkdownItInstance) => void>',
       default: '[]',
     },
     markdownOptions: {

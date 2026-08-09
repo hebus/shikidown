@@ -2,7 +2,27 @@ import Link from 'next/link';
 import { DynamicCodeBlock } from 'fumadocs-ui/components/dynamic-codeblock';
 import { appName, demoUrl, npmUrl } from '@/lib/shared';
 
-const quickStart = `import { provideMarkdown, MarkdownComponent } from 'shikidown';
+const quickStart = `import {
+  ApplicationConfig, ChangeDetectionStrategy, Component, input, linkedSignal,
+} from '@angular/core';
+import { provideMarkdown, MarkdownComponent } from 'shikidown';
+
+@Component({
+  selector: 'my-counter',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: \`
+    <div>Count: {{ count() }}</div>
+    <button (click)="increment()">+1</button>
+  \`,
+})
+export class CounterComponent {
+  readonly initialCount = input(0);
+  readonly count = linkedSignal(() => this.initialCount());
+
+  increment(): void {
+    this.count.update((n) => n + 1);
+  }
+}
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -42,7 +62,7 @@ export default function HomePage() {
     <main className="flex flex-1 flex-col">
       <section className="mx-auto flex w-full max-w-5xl flex-col items-center gap-6 px-4 py-20 text-center">
         <p className="rounded-full border border-fd-border px-3 py-1 text-xs font-medium text-fd-muted-foreground">
-          Angular 22 · Shiki v4 · markdown-it 14
+          Angular 22 · Shiki v4 · markdown-it 14 &amp; 15
         </p>
 
         <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">{appName}</h1>
@@ -53,7 +73,7 @@ export default function HomePage() {
         </p>
 
         <code className="rounded-lg border border-fd-border bg-fd-card px-4 py-2 text-sm">
-          npm install shikidown shiki markdown-it
+          npm install shikidown shiki markdown-it @angular/elements
         </code>
 
         <div className="flex flex-wrap items-center justify-center gap-3">

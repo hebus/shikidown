@@ -7,7 +7,7 @@
 [![Changelog](https://img.shields.io/badge/changelog-releases-8957e5)](https://github.com/hebus/shikidown/releases)
 [![Angular](https://img.shields.io/badge/Angular-22-red?logo=angular)](https://angular.dev)
 [![Shiki](https://img.shields.io/badge/Shiki-v4-blue)](https://shiki.style)
-[![markdown-it](https://img.shields.io/badge/markdown--it-14-green)](https://markdown-it.github.io)
+[![markdown-it](https://img.shields.io/badge/markdown--it-14%20%7C%2015-green)](https://markdown-it.github.io)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
 ## What is shikidown?
@@ -49,11 +49,16 @@ from npm.
 ## Installation
 
 ```bash
-npm install shikidown shiki markdown-it
-npm install --save-dev @types/markdown-it
+npm install shikidown shiki markdown-it @angular/elements
 ```
 
-**Peer dependencies** (already present in any Angular 22 project):
+`markdown-it` v15 ships its own type definitions. On v14, add them separately:
+
+```bash
+npm install --save-dev @types/markdown-it   # v14 only
+```
+
+**Peer dependencies:**
 
 | Package | Version |
 |---------|---------|
@@ -64,10 +69,37 @@ npm install --save-dev @types/markdown-it
 | `markdown-it` | `>=14.0.0` |
 | `shiki` | `>=4.0.0` |
 
+> **Required, and easy to miss:** `@angular/elements` turns your components into Custom Elements.
+> It ships as part of Angular, but `ng new` does not add it to `package.json` — so it is usually
+> absent. `provideMarkdown()` imports `createCustomElement` from it directly: without the package
+> the build fails on an unresolved import.
+
 > **Optional:** `mermaid` (`>=11`) is an *optional* peer dependency. Install it **only** if you
 > render diagrams — see [Mermaid diagrams](#mermaid-diagrams). It is loaded exclusively through
 > the `shikidown/mermaid` entry point, so consumers who don't use it never pull `mermaid` into
 > their bundle.
+
+### TypeScript configuration
+
+`shiki` `>=4.4` declares `[Symbol.dispose]()` on its highlighter, which the default `ES2022`
+library does not know about. Without it the build fails with:
+
+```
+TS2550: Property 'dispose' does not exist on type 'SymbolConstructor'.
+```
+
+Add `ESNext.Disposable` to `lib` in your `tsconfig.json`:
+
+```jsonc
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable", "ESNext.Disposable"]
+  }
+}
+```
+
+Prefer this over `"lib": ["esnext"]`, which would also enable every other proposal-stage API.
 
 ---
 
@@ -144,7 +176,7 @@ provideMarkdown({
 | `languages` | `StringLiteralUnion<BundledLanguage>[]` | 17 common languages¹ | Shiki languages to preload at startup. |
 | `components` | `Record<string, Type<unknown>>` | `{}` | Angular components registered as Custom Elements. |
 | `componentModules` | `ComponentModuleSource[]` | `[]` | Modules whose exported components are registered, selectors read from their decorators. An entry may be a `() => import('…')` loader — see [Lazy-loaded components](#lazy-loaded-components). |
-| `plugins` | `Array<(md: unknown) => void>` | `[]` | markdown-it plugins applied in order. |
+| `plugins` | `Array<(md: MarkdownItInstance) => void>` | `[]` | markdown-it plugins applied in order. `MarkdownItInstance` is exported by `shikidown` and resolves to the markdown-it instance type on both v14 and v15. |
 | `markdownOptions` | `MarkdownItOptions` | — | markdown-it constructor options, merged with the library defaults (`html: true`, `linkify: true`, `typographer: true`). |
 | `incrementalRendering` | `boolean` | `false` | Enable block-level incremental rendering in `MarkdownComponent`. Has no effect on `MarkdownPipe`. |
 | `blockCacheSize` | `number` | `256` | Maximum number of rendered blocks kept in the LRU cache. |

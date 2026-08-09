@@ -59,7 +59,7 @@ ng build shikidown
 | Librairie        | Version | Rôle                           |
 |------------------|---------|--------------------------------|
 | \`shikidown\`    | 1.0     | Librairie Angular de rendu     |
-| \`markdown-it\`  | 14.x    | Parser Markdown                |
+| \`markdown-it\`  | 14 / 15 | Parser Markdown                |
 | \`shiki\`        | 4.x     | Syntax highlighting            |
 | \`tailwindcss\`  | 4.x     | Styles utilitaires             |
 
@@ -122,7 +122,7 @@ ng build shikidown
 | Library          | Version | Role                                |
 |------------------|---------|-------------------------------------|
 | \`shikidown\`    | 1.0     | Angular Markdown rendering library  |
-| \`markdown-it\`  | 14.x    | Markdown parser                     |
+| \`markdown-it\`  | 14 / 15 | Markdown parser                     |
 | \`shiki\`        | 4.x     | Syntax highlighting                 |
 | \`tailwindcss\`  | 4.x     | Utility-first CSS                   |
 

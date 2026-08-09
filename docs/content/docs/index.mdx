@@ -42,8 +42,33 @@ what you are building.
 
 ## A complete example
 
+```typescript title="counter.ts"
+import { ChangeDetectionStrategy, Component, input, linkedSignal } from '@angular/core';
+
+@Component({
+  selector: 'my-counter',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <div>Count: {{ count() }}</div>
+    <button (click)="increment()">+1</button>
+  `,
+})
+export class CounterComponent {
+  readonly initialCount = input(0);
+  // linkedSignal seeds from the input and stays writable — the counter resets
+  // if the attribute changes, which a plain signal() in ngOnInit would miss.
+  readonly count = linkedSignal(() => this.initialCount());
+
+  increment(): void {
+    this.count.update((n) => n + 1);
+  }
+}
+```
+
 ```typescript title="app.config.ts"
+import { ApplicationConfig } from '@angular/core';
 import { provideMarkdown } from 'shikidown';
+import { CounterComponent } from './counter';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -56,6 +81,7 @@ export const appConfig: ApplicationConfig = {
 ```
 
 ```typescript title="docs-page.ts"
+import { Component } from '@angular/core';
 import { MarkdownComponent } from 'shikidown';
 
 @Component({

@@ -12,9 +12,17 @@ const GUIDE_MD: Record<'fr' | 'en', string> = {
 ## Installation
 
 \`\`\`bash
-npm install shikidown shiki markdown-it
-npm install --save-dev @types/markdown-it
+npm install shikidown shiki markdown-it @angular/elements
+npm install --save-dev @types/markdown-it   # markdown-it v14 uniquement
 \`\`\`
+
+\`@angular/elements\` est requis : il est fourni avec Angular mais \`ng new\` ne l'ajoute pas au
+\`package.json\`. À partir de \`markdown-it\` v15, les types sont inclus dans le paquet et
+\`@types/markdown-it\` devient inutile.
+
+Avec \`shiki\` >= 4.4, ajoutez \`ESNext.Disposable\` à \`lib\` dans votre \`tsconfig.json\` —
+sans quoi la compilation échoue sur \`TS2550: Property 'dispose' does not exist on type
+'SymbolConstructor'\`.
 
 ## Configuration
 
@@ -164,12 +172,14 @@ graph TD
 
 ### Plugin personnalisé
 
-Un plugin est une simple fonction qui reçoit l'instance \`MarkdownIt\` :
+Un plugin est une simple fonction qui reçoit l'instance markdown-it, typée
+\`MarkdownItInstance\` — le type exporté par shikidown. Utilisez-le plutôt que l'export
+par défaut de markdown-it, qui n'est plus utilisable comme type depuis la v15 :
 
 \`\`\`typescript
-import type MarkdownIt from 'markdown-it';
+import type { MarkdownItInstance } from 'shikidown';
 
-function monPlugin(md: MarkdownIt): void {
+function monPlugin(md: MarkdownItInstance): void {
   md.core.ruler.push('mark', (state) => {
     // transformer les tokens ici
   });
@@ -385,9 +395,16 @@ import type {
 ## Installation
 
 \`\`\`bash
-npm install shikidown shiki markdown-it
-npm install --save-dev @types/markdown-it
+npm install shikidown shiki markdown-it @angular/elements
+npm install --save-dev @types/markdown-it   # markdown-it v14 only
 \`\`\`
+
+\`@angular/elements\` is required: it ships with Angular but \`ng new\` does not add it to your
+\`package.json\`. From \`markdown-it\` v15 onwards the types are bundled and
+\`@types/markdown-it\` is no longer needed.
+
+With \`shiki\` >= 4.4, add \`ESNext.Disposable\` to \`lib\` in your \`tsconfig.json\` — otherwise
+the build fails with \`TS2550: Property 'dispose' does not exist on type 'SymbolConstructor'\`.
 
 ## Configuration
 
@@ -537,12 +554,14 @@ graph TD
 
 ### Custom plugin
 
-A plugin is any function that receives the \`MarkdownIt\` instance:
+A plugin is any function that receives the markdown-it instance, typed as
+\`MarkdownItInstance\` — the type shikidown exports. Prefer it over markdown-it's
+default export, which stopped working in type position in v15:
 
 \`\`\`typescript
-import type MarkdownIt from 'markdown-it';
+import type { MarkdownItInstance } from 'shikidown';
 
-function myPlugin(md: MarkdownIt): void {
+function myPlugin(md: MarkdownItInstance): void {
   md.core.ruler.push('mark', (state) => {
     // transform tokens here
   });
