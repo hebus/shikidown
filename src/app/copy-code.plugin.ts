@@ -1,9 +1,9 @@
-import type MarkdownIt from 'markdown-it';
+import type { MarkdownItInstance } from 'shikidown';
 
-export function copyCodePlugin(md: MarkdownIt): void {
-  const original = md.renderer.rules.fence;
+export function copyCodePlugin(md: MarkdownItInstance): void {
+  const original = md.renderer.rules['fence'];
 
-  md.renderer.rules.fence = (tokens, idx, options, env, self) => {
+  md.renderer.rules['fence'] = (tokens, idx, options, env, self) => {
     const rendered = original
       ? original(tokens, idx, options, env, self)
       : self.renderToken(tokens, idx, options);
