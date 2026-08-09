@@ -27,7 +27,7 @@ interface MarkdownConfig {
   languages?: StringLiteralUnion<BundledLanguage>[];
   components?: Record<string, Type<unknown>>;
   componentModules?: ComponentModuleSource[];
-  plugins?: Array<(md: MarkdownItInstance) => void>;
+  plugins?: MarkdownItPluginSource[];
   markdownOptions?: MarkdownItOptions;
   incrementalRendering?: boolean;
   blockCacheSize?: number;

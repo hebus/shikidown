@@ -63,8 +63,8 @@ provideMarkdown({
       default: '[]',
     },
     plugins: {
-      description: 'markdown-it plugins, applied in order at initialisation.',
-      type: 'Array<(md: MarkdownItInstance) => void>',
+      description: 'markdown-it plugins, applied in order at initialisation. An entry may be a { load: () => import(…) } loader.',
+      type: 'MarkdownItPluginSource[]',
       default: '[]',
     },
     markdownOptions: {
@@ -146,6 +146,28 @@ provideMarkdown({
 ```
 
 Plugins are applied in array order, once, when the service initialises.
+
+### Loading a plugin lazily
+
+A plugin listed above is imported eagerly, so it lands in your initial bundle even on pages without
+a single formula or footnote. For a heavy one — KaTeX is around 266 kB — pass a loader instead:
+
+```typescript
+provideMarkdown({
+  plugins: [markdownItAnchor, { load: () => import('@vscode/markdown-it-katex') }],
+});
+```
+
+Loaders resolve in parallel while the service initialises, then apply in **array order** — the
+position in the list decides precedence, not which download finished first. A module's `default`
+export is unwrapped for you, which is the shape a CommonJS plugin arrives in.
+
+<Callout type="info">
+  The lazy form is an object, while `componentModules` accepts a bare `() => import('…')`. There, a
+  module is an object and a loader a function, so the two are told apart on sight. A plugin is
+  itself a function, so nothing distinguishes it from a loader — not even arity, since a plugin may
+  ignore its argument. The `load` key removes the ambiguity.
+</Callout>
 
 <Callout type="info">
   You do **not** need a plugin for Mermaid. Fenced `mermaid` blocks are handled by the library

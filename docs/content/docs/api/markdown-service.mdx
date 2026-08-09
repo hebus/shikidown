@@ -46,7 +46,9 @@ initialize(): Promise<void>
 ```
 
 Dynamically imports Shiki, creates the highlighter with the configured themes and languages, builds
-the markdown-it instance, applies your plugins and installs the `mermaid` fence rule.
+the markdown-it instance, resolves and applies your plugins, and installs the `mermaid` fence rule.
+Plugins declared as `{ load: () => import('…') }` are fetched here, in parallel, before any of them
+is applied.
 
 Idempotent, and safe to call concurrently — the promise is memoised, so parallel callers share one
 initialisation. Every async method calls it for you; you only need it explicitly before

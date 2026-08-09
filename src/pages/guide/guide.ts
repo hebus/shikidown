@@ -104,16 +104,20 @@ provideMarkdown({
 npm install @vscode/markdown-it-katex
 \`\`\`
 
-\`\`\`typescript
-import markdownItKatex from '@vscode/markdown-it-katex';
+KaTeX pèse environ 266 Ko : déclarez-le en chargeur paresseux pour qu'il reste hors
+du bundle initial des pages sans formule.
 
-provideMarkdown({ plugins: [markdownItKatex] })
+\`\`\`typescript
+provideMarkdown({
+  plugins: [{ load: () => import('@vscode/markdown-it-katex') }],
+})
 \`\`\`
 
-Ajoutez la feuille de style KaTeX dans \`index.html\` :
+Ajoutez la feuille de style KaTeX aux \`styles\` de votre \`angular.json\` — la version
+est alors figée par votre lockfile, sans dépendance réseau externe :
 
-\`\`\`html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex/dist/katex.min.css" />
+\`\`\`json
+"styles": ["node_modules/katex/dist/katex.min.css", "src/styles.css"]
 \`\`\`
 
 Syntaxe dans le Markdown — formule inline avec \`$...$\` ou en bloc avec \`$$...$$\` :
@@ -486,16 +490,20 @@ provideMarkdown({
 npm install @vscode/markdown-it-katex
 \`\`\`
 
-\`\`\`typescript
-import markdownItKatex from '@vscode/markdown-it-katex';
+KaTeX weighs around 266 kB, so declare it as a lazy loader to keep it out of the
+initial bundle on pages without a formula.
 
-provideMarkdown({ plugins: [markdownItKatex] })
+\`\`\`typescript
+provideMarkdown({
+  plugins: [{ load: () => import('@vscode/markdown-it-katex') }],
+})
 \`\`\`
 
-Add the KaTeX stylesheet to your \`index.html\`:
+Add the KaTeX stylesheet to the \`styles\` array of your \`angular.json\` — the version
+is then pinned by your lockfile, with no external network dependency:
 
-\`\`\`html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex/dist/katex.min.css" />
+\`\`\`json
+"styles": ["node_modules/katex/dist/katex.min.css", "src/styles.css"]
 \`\`\`
 
 Markdown syntax — inline with \`$...$\` or block with \`$$...$$\`:

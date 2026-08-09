@@ -154,8 +154,9 @@ provideMarkdown({
     'my-counter': CounterComponent,
   },
 
-  // Additional markdown-it plugins
-  plugins: [markdownItAnchor, markdownItFootnote],
+  // Additional markdown-it plugins — eager, or `{ load }` to keep a heavy one
+  // out of the initial bundle
+  plugins: [markdownItAnchor, { load: () => import('@vscode/markdown-it-katex') }],
 
   // Override markdown-it options (merged with defaults)
   markdownOptions: { breaks: true },
@@ -176,7 +177,7 @@ provideMarkdown({
 | `languages` | `StringLiteralUnion<BundledLanguage>[]` | 17 common languages¹ | Shiki languages to preload at startup. |
 | `components` | `Record<string, Type<unknown>>` | `{}` | Angular components registered as Custom Elements. |
 | `componentModules` | `ComponentModuleSource[]` | `[]` | Modules whose exported components are registered, selectors read from their decorators. An entry may be a `() => import('…')` loader — see [Lazy-loaded components](#lazy-loaded-components). |
-| `plugins` | `Array<(md: MarkdownItInstance) => void>` | `[]` | markdown-it plugins applied in order. `MarkdownItInstance` is exported by `shikidown` and resolves to the markdown-it instance type on both v14 and v15. |
+| `plugins` | `MarkdownItPluginSource[]` | `[]` | markdown-it plugins applied in declaration order. Each entry is either a plugin function, or `{ load: () => import('…') }` to resolve it lazily and keep it out of the initial bundle. A plugin receives `MarkdownItInstance`, the type `shikidown` exports for the markdown-it instance on both v14 and v15. |
 | `markdownOptions` | `MarkdownItOptions` | — | markdown-it constructor options, merged with the library defaults (`html: true`, `linkify: true`, `typographer: true`). |
 | `incrementalRendering` | `boolean` | `false` | Enable block-level incremental rendering in `MarkdownComponent`. Has no effect on `MarkdownPipe`. |
 | `blockCacheSize` | `number` | `256` | Maximum number of rendered blocks kept in the LRU cache. |
