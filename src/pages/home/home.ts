@@ -121,6 +121,71 @@ graph TD
 `,
 };
 
+// Every LaTeX command needs a doubled backslash to survive the template literal:
+// `\i` and `\s` are not escape sequences, so JS drops the backslash and KaTeX would
+// receive `int` and `sqrt` as plain variables. A LaTeX row break is itself `\\`, so
+// inside pmatrix and aligned it takes four.
+const KATEX_MD: Record<'fr' | 'en', string> = {
+  fr: `
+## Formules mathématiques
+
+Un plugin markdown-it suffit : les formules KaTeX s'écrivent en ligne avec
+\\$...\\$ — comme $E = mc^2$ — ou en bloc avec \\$\\$...\\$\\$.
+
+Une série convergente :
+
+$$
+\\sum_{n=1}^{\\infty} \\frac{1}{n^2} = \\frac{\\pi^2}{6}
+$$
+
+Une matrice et son déterminant :
+
+$$
+A = \\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}
+\\qquad
+\\det A = ad - bc
+$$
+
+Un système aligné :
+
+$$
+\\begin{aligned}
+\\nabla \\cdot \\mathbf{E} &= \\frac{\\rho}{\\varepsilon_0} \\\\
+\\nabla \\times \\mathbf{B} &= \\mu_0 \\mathbf{J} + \\mu_0 \\varepsilon_0 \\frac{\\partial \\mathbf{E}}{\\partial t}
+\\end{aligned}
+$$
+`,
+  en: `
+## Mathematical formulas
+
+One markdown-it plugin is all it takes: KaTeX formulas go inline with
+\\$...\\$ — like $E = mc^2$ — or as a block with \\$\\$...\\$\\$.
+
+A convergent series:
+
+$$
+\\sum_{n=1}^{\\infty} \\frac{1}{n^2} = \\frac{\\pi^2}{6}
+$$
+
+A matrix and its determinant:
+
+$$
+A = \\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}
+\\qquad
+\\det A = ad - bc
+$$
+
+An aligned system:
+
+$$
+\\begin{aligned}
+\\nabla \\cdot \\mathbf{E} &= \\frac{\\rho}{\\varepsilon_0} \\\\
+\\nabla \\times \\mathbf{B} &= \\mu_0 \\mathbf{J} + \\mu_0 \\varepsilon_0 \\frac{\\partial \\mathbf{E}}{\\partial t}
+\\end{aligned}
+$$
+`,
+};
+
 const FEATURES_MD: Record<'fr' | 'en', string> = {
   fr: `
 ## Fonctionnalités
@@ -252,6 +317,12 @@ const UI: Record<'fr' | 'en', { start: string; quickstart: string; docs: string 
         <shikidown mermaid [content]="mermaidMd()" class="prose prose-slate dark:prose-invert max-w-none"/>
       </section>
 
+      <!-- KaTeX demo — overflow-x-auto so a wide aligned system scrolls rather than
+           stretching the page on a narrow screen -->
+      <section class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 overflow-x-auto">
+        <shikidown [content]="katexMd()" class="prose prose-slate dark:prose-invert max-w-none" />
+      </section>
+
       <!-- Features table -->
       <section class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 overflow-hidden">
         <shikidown [content]="featuresMd()" class="prose prose-slate dark:prose-invert max-w-none" />
@@ -271,6 +342,7 @@ export class HomeComponent {
   readonly lang = this.langService.lang;
   readonly heroMd    = computed(() => HERO_MD[this.lang()]);
   readonly mermaidMd  = computed(() => MERMAID_MD[this.lang()]);
+  readonly katexMd    = computed(() => KATEX_MD[this.lang()]);
   readonly featuresMd = computed(() => FEATURES_MD[this.lang()]);
   readonly features  = computed(() => FEATURES_CARDS[this.lang()]);
   readonly ui        = computed(() => UI[this.lang()]);
