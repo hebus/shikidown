@@ -138,7 +138,7 @@ Vous pouvez librement mélanger texte Markdown et composants Angular dans le mê
 - Nouvelle API \`provideMarkdown()\` avec options étendues
 - Pipe \`markdown\` refactorisé pour retourner un Observable
 
-<demo-alert type="warning" title="Breaking Change" message="La fonction initMarkdown() est supprimée. Utilisez provideMarkdown() à la place."></demo-alert>
+<demo-alert type="warning" title="Breaking Change" message="Les options de thème passent d'une chaîne unique à une paire dark/light. Une chaîne reste acceptée et s'applique aux deux modes."></demo-alert>
 
 #### Compteur de votes
 
@@ -167,7 +167,7 @@ You can freely mix Markdown text and Angular components in the same document.
 - New \`provideMarkdown()\` API with extended options
 - Refactored \`markdown\` pipe returning an Observable
 
-<demo-alert type="warning" title="Breaking Change" message="The initMarkdown() function has been removed. Use provideMarkdown() instead."></demo-alert>
+<demo-alert type="warning" title="Breaking Change" message="Theme options move from a single string to a dark/light pair. A plain string is still accepted and applies to both modes."></demo-alert>
 
 #### Feature vote counter
 
