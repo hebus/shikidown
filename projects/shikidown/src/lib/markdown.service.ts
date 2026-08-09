@@ -94,8 +94,17 @@ export class MarkdownService {
       ...this.config.markdownOptions,
     });
 
-    for (const plugin of this.config.plugins ?? []) {
-      (plugin as (md: MarkdownItInstance) => void)(this.md);
+    // Résolution en parallèle, application séquentielle : les chargeurs paresseux
+    // se téléchargent de front, mais l'ordre de déclaration reste significatif.
+    const plugins = await Promise.all(
+      (this.config.plugins ?? []).map((source) =>
+        typeof source === 'function'
+          ? Promise.resolve(source)
+          : source.load().then((m) => ('default' in m ? m.default : m)),
+      ),
+    );
+    for (const plugin of plugins) {
+      plugin(this.md);
     }
 
     // Mermaid fence: output a <pre class="mermaid"> placeholder so mermaid.run()

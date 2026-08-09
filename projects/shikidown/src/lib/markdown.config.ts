@@ -22,6 +22,25 @@ export type ComponentModule = Record<string, unknown>;
  */
 export type ComponentModuleSource = ComponentModule | (() => Promise<ComponentModule>);
 
+/** Un plugin markdown-it : reçoit l'instance et la modifie en place. */
+export type MarkdownItPlugin = (md: MarkdownItInstance) => void;
+
+/**
+ * Un plugin déjà chargé, ou un chargeur qui le résout à la demande.
+ *
+ * La forme paresseuse `{ load: () => import('markdown-it-foo') }` garde le plugin
+ * hors du bundle initial — utile pour les gros paquets comme KaTeX.
+ *
+ * Elle passe par un objet là où `ComponentModuleSource` se contente d'une fonction
+ * nue : un module est un objet et un chargeur une fonction, donc `typeof` les
+ * sépare. Ici les deux formes seraient des fonctions, et l'arité ne les distingue
+ * pas — un plugin qui ignore son paramètre a une arité de 0, tout comme un
+ * chargeur. La clé `load` retire l'ambiguïté.
+ */
+export type MarkdownItPluginSource =
+  | MarkdownItPlugin
+  | { load: () => Promise<MarkdownItPlugin | { default: MarkdownItPlugin }> };
+
 /** Options markdown-it supportées */
 export interface MarkdownItOptions {
   html?: boolean;
@@ -77,8 +96,14 @@ export interface MarkdownConfig {
    *
    * provideMarkdown({ plugins: [markdownItAnchor, markdownItFootnote] })
    * ```
+   *
+   * @example
+   * ```typescript
+   * // Chargé à la demande — reste hors du bundle initial
+   * provideMarkdown({ plugins: [{ load: () => import('@vscode/markdown-it-katex') }] })
+   * ```
    */
-  plugins?: Array<(md: MarkdownItInstance) => void>;
+  plugins?: MarkdownItPluginSource[];
   /** Options markdown-it personnalisées, fusionnées avec les défauts */
   markdownOptions?: MarkdownItOptions;
   /**

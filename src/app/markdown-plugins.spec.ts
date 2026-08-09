@@ -1,12 +1,17 @@
 import { PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { MarkdownService, provideMarkdown, type MarkdownItInstance } from 'shikidown';
+import {
+  MarkdownService,
+  provideMarkdown,
+  type MarkdownItInstance,
+  type MarkdownItPluginSource,
+} from 'shikidown';
 import { copyCodePlugin } from './copy-code.plugin';
 
 // `initialize()` only loads Shiki under isPlatformBrowser. Forcing the platform to
 // 'server' keeps the highlighter's WASM out of these tests while still walking the
 // whole markdown-it construction — which is where plugins are applied.
-function serviceWith(plugins: Array<(md: MarkdownItInstance) => void>): MarkdownService {
+function serviceWith(plugins: MarkdownItPluginSource[]): MarkdownService {
   TestBed.configureTestingModule({
     providers: [{ provide: PLATFORM_ID, useValue: 'server' }, provideMarkdown({ plugins })],
   });
@@ -60,5 +65,41 @@ describe('provideMarkdown plugins', () => {
 
     expect(html).toContain('class="mermaid"');
     expect(html).not.toContain('class="code-block');
+  });
+
+  it('resolves a lazy plugin loader before rendering', async () => {
+    const shout = (md: MarkdownItInstance): void => {
+      md.renderer.rules['text'] = (tokens, idx) => tokens[idx].content.toUpperCase();
+    };
+
+    const html = await serviceWith([{ load: () => Promise.resolve(shout) }]).parseAsync('hello');
+
+    expect(html).toContain('HELLO');
+  });
+
+  it('unwraps the default export of a lazily imported module', async () => {
+    // `import()` on a CommonJS plugin yields { default: fn } — the shape most
+    // markdown-it plugins arrive in.
+    const shout = (md: MarkdownItInstance): void => {
+      md.renderer.rules['text'] = (tokens, idx) => tokens[idx].content.toUpperCase();
+    };
+
+    const html = await serviceWith([{ load: () => Promise.resolve({ default: shout }) }]).parseAsync('hello');
+
+    expect(html).toContain('HELLO');
+  });
+
+  it('keeps declaration order when mixing eager and lazy plugins', async () => {
+    // Loaders resolve in parallel, so a slow one must not overtake: order comes
+    // from the array, not from resolution timing.
+    const order: string[] = [];
+    const slow = () => new Promise<() => void>((r) => setTimeout(() => r(() => void order.push('lazy')), 10));
+
+    await serviceWith([
+      { load: slow },
+      () => void order.push('eager'),
+    ]).parseAsync('x');
+
+    expect(order).toEqual(['lazy', 'eager']);
   });
 });
