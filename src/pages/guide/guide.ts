@@ -127,7 +127,7 @@ Syntaxe dans le Markdown — formule inline avec \`$...$\` ou en bloc avec \`$$.
 **Bloc :**
 
 $$
-\int_{-\infty}^{+\infty} e^{-x^2}\,dx = \sqrt{\pi}
+\\int_{-\\infty}^{+\\infty} e^{-x^2}\\,dx = \\sqrt{\\pi}
 $$
 
 $$
@@ -513,7 +513,7 @@ Markdown syntax — inline with \`$...$\` or block with \`$$...$$\`:
 **Block:**
 
 $$
-\int_{-\infty}^{+\infty} e^{-x^2}\,dx = \sqrt{\pi}
+\\int_{-\\infty}^{+\\infty} e^{-x^2}\\,dx = \\sqrt{\\pi}
 $$
 
 $$
