@@ -7,7 +7,6 @@ import {
 } from '@angular/router';
 import { provideMarkdown } from 'shikidown';
 import { copyCodePlugin } from './copy-code.plugin';
-import markdownItKatex from '@vscode/markdown-it-katex';
 import { routes } from './app.routes';
 import { DemoCounterComponent } from '../components/demo-counter/demo-counter';
 import { DemoAlertComponent } from '../components/demo-alert/demo-alert';
@@ -27,7 +26,11 @@ export const appConfig: ApplicationConfig = {
       withInMemoryScrolling({ anchorScrolling: 'enabled' }),
     ),
     provideMarkdown({
-      plugins: [copyCodePlugin, markdownItKatex],
+      // KaTeX is ~266 kB and most pages carry no formula, so it is loaded on demand
+      // rather than bundled into the initial chunk. Its stylesheet stays eager
+      // (angular.json) — it is small, and it has to be in place before the first
+      // formula paints.
+      plugins: [copyCodePlugin, { load: () => import('@vscode/markdown-it-katex') }],
       theme: { dark: 'github-dark', light: "catppuccin-latte" },
       languages: ['angular-html', 'angular-ts', 'typescript', 'javascript', 'html', 'css', 'bash', 'json', 'markdown', 'python', 'rust'],
       incrementalRendering: true,
