@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    # The library declares "markdown-it": ">=14.0.0". v15 turned the default export from a
+    # class into a callable const — a change that is invisible at runtime and only breaks in
+    # type position (TS2749). Building against a single major would leave half of the promised
+    # range unverified, which is exactly how 2.2.0 shipped uninstallable on v15.
+    name: markdown-it ${{ matrix.markdown_it }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # v14 ships no declarations of its own; they live in @types/markdown-it.
+          - markdown_it: '14'
+            extra_deps: '@types/markdown-it'
+          # v15 bundles them. Installing @types here would shadow them with a stale copy.
+          - markdown_it: '15'
+            extra_deps: ''
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # --no-save leaves package.json and the lockfile alone, so the matrix only swaps what
+      # sits in node_modules. The workspace itself stays on the version it pins.
+      - name: Pin markdown-it ${{ matrix.markdown_it }}
+        run: npm install --no-save markdown-it@${{ matrix.markdown_it }} ${{ matrix.extra_deps }}
+
+      # Read through the path rather than the package name: resolving a subpath depends on the
+      # major's "exports" map, which is itself something these two versions disagree on.
+      - name: Report resolved version
+        run: node -p "'markdown-it ' + require('./node_modules/markdown-it/package.json').version"
+
+      # Type-checks the published surface through ng-packagr — where TS2749 surfaced.
+      - name: Build library
+        run: npm run build:lib
+
+      - name: Test
+        run: npx ng test markdown-shiki-renderer
+
+      # Consumer-style code: the demo types a plugin through MarkdownItInstance, and this is
+      # the only build that applies the app tsconfig — including
+      # noPropertyAccessFromIndexSignature, which v15 trips on renderer.rules.
+      - name: Build demo
+        run: npx ng build markdown-shiki-renderer --configuration production
