@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { DOCUMENT } from '@angular/common';
 import { LanguageService } from '../../services/language.service';
+import { VERSIONS } from '../../app/app-version';
 import { siteLinks } from '../../app/site-links';
 
 @Component({
@@ -16,7 +17,7 @@ import { siteLinks } from '../../app/site-links';
         <a [href]="links.home" class="flex items-center gap-2 font-bold text-gray-900 dark:text-white text-lg">
           <span class="flex h-7 w-7 items-center justify-center rounded-md bg-indigo-600 text-white text-sm font-black">S</span>
           <span>shikidown</span>
-          <span class="hidden sm:inline text-xs font-normal text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-gray-700 rounded px-1.5 py-0.5">v1.0</span>
+          <span class="hidden sm:inline text-xs font-normal text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-gray-700 rounded px-1.5 py-0.5">v{{ versions.lib }}</span>
         </a>
 
         <!-- Links -->
@@ -69,6 +70,8 @@ export class NavbarComponent {
 
   /** Absolute links to the documentation site the demo is published alongside. */
   readonly links = siteLinks();
+
+  readonly versions = VERSIONS;
 
   readonly navLinks = computed(() =>
     this.langService.lang() === 'fr'

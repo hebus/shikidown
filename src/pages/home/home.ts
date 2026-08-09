@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { MarkdownComponent } from 'shikidown';
 import { MermaidDirective } from 'shikidown/mermaid';
 import { LanguageService } from '../../services/language.service';
+import { VERSIONS } from '../../app/app-version';
 import { siteLinks } from '../../app/site-links';
 
 const HERO_MD: Record<'fr' | 'en', string> = {
@@ -10,7 +11,7 @@ const HERO_MD: Record<'fr' | 'en', string> = {
 # Markdown enrichi de composants Angular
 
 **shikidown** transforme vos fichiers Markdown en expériences interactives.
-Associez la puissance de \`markdown-it\`, la beauté de \`shiki\` et la réactivité d'Angular 21.
+Associez la puissance de \`markdown-it\`, la beauté de \`shiki\` et la réactivité d'Angular ${VERSIONS.angular}.
 
 \`\`\`typescript
 // app.config.ts
@@ -40,7 +41,7 @@ Ou depuis une string directement dans le Markdown :
 # Markdown enriched with Angular components
 
 **shikidown** turns your Markdown files into interactive experiences.
-Combine the power of \`markdown-it\`, the beauty of \`shiki\`, and the reactivity of Angular 21.
+Combine the power of \`markdown-it\`, the beauty of \`shiki\`, and the reactivity of Angular ${VERSIONS.angular}.
 
 \`\`\`typescript
 // app.config.ts
@@ -201,7 +202,7 @@ const UI: Record<'fr' | 'en', { start: string; quickstart: string; docs: string 
       <!-- Hero -->
       <section class="text-center space-y-6">
         <div class="inline-flex items-center gap-2 rounded-full border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/20 px-4 py-1.5 text-sm text-indigo-600 dark:text-indigo-400 font-medium">
-          ✨ Angular 21 · markdown-it · shiki v4 · TailwindCSS v4
+          ✨ Angular {{ versions.angular }} · markdown-it {{ versions.markdownIt }} · shiki v{{ versions.shiki }} · TailwindCSS v{{ versions.tailwind }}
         </div>
         <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-gray-900 dark:text-white leading-tight">
           Markdown + Angular<br>
@@ -264,6 +265,8 @@ export class HomeComponent {
 
   /** Absolute link to the documentation site the demo is published alongside. */
   readonly links = siteLinks();
+
+  readonly versions = VERSIONS;
 
   readonly lang = this.langService.lang;
   readonly heroMd    = computed(() => HERO_MD[this.lang()]);

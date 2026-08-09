@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } 
 import { FormsModule } from '@angular/forms';
 import { MarkdownComponent } from 'shikidown';
 import { LanguageService } from '../../services/language.service';
+import { VERSIONS } from '../../app/app-version';
 
 const INITIAL_CONTENT: Record<'fr' | 'en', string> = {
   fr: `# Playground shikidown 🎮
@@ -26,7 +27,7 @@ const INITIAL_CONTENT: Record<'fr' | 'en', string> = {
 ## Code avec Shiki
 
 \`\`\`typescript
-// Composant Angular 21 moderne
+// Composant Angular ${VERSIONS.angular} moderne
 @Component({
   selector: 'mon-comp',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -50,7 +51,7 @@ ng build shikidown
 
 <demo-alert type="info" title="Astuce" message="Vous pouvez modifier le Markdown à gauche pour voir le rendu changer instantanément !"></demo-alert>
 
-<demo-badge label="Angular 21" color="red"></demo-badge>
+<demo-badge label="Angular ${VERSIONS.angular}" color="red"></demo-badge>
 <demo-badge label="Shiki v4" color="purple"></demo-badge>
 <demo-badge label="TailwindCSS v4" color="teal"></demo-badge>
 
@@ -58,7 +59,7 @@ ng build shikidown
 
 | Librairie        | Version | Rôle                           |
 |------------------|---------|--------------------------------|
-| \`shikidown\`    | 1.0     | Librairie Angular de rendu     |
+| \`shikidown\`    | ${VERSIONS.lib}   | Librairie Angular de rendu     |
 | \`markdown-it\`  | 14 / 15 | Parser Markdown                |
 | \`shiki\`        | 4.x     | Syntax highlighting            |
 | \`tailwindcss\`  | 4.x     | Styles utilitaires             |
@@ -89,7 +90,7 @@ Edit this Markdown and see the live preview!
 ## Code with Shiki
 
 \`\`\`typescript
-// Modern Angular 21 component
+// Modern Angular ${VERSIONS.angular} component
 @Component({
   selector: 'my-comp',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -113,7 +114,7 @@ ng build shikidown
 
 <demo-alert type="info" title="Tip" message="Edit the Markdown on the left to see the preview update instantly!"></demo-alert>
 
-<demo-badge label="Angular 21" color="red"></demo-badge>
+<demo-badge label="Angular ${VERSIONS.angular}" color="red"></demo-badge>
 <demo-badge label="Shiki v4" color="purple"></demo-badge>
 <demo-badge label="TailwindCSS v4" color="teal"></demo-badge>
 
@@ -121,7 +122,7 @@ ng build shikidown
 
 | Library          | Version | Role                                |
 |------------------|---------|-------------------------------------|
-| \`shikidown\`    | 1.0     | Angular Markdown rendering library  |
+| \`shikidown\`    | ${VERSIONS.lib}   | Angular Markdown rendering library  |
 | \`markdown-it\`  | 14 / 15 | Markdown parser                     |
 | \`shiki\`        | 4.x     | Syntax highlighting                 |
 | \`tailwindcss\`  | 4.x     | Utility-first CSS                   |
@@ -155,7 +156,7 @@ console.log(add(2, 3)); // 5
 \`\`\`
 
 \`\`\`json
-{ "name": "shikidown", "version": "1.0.0" }
+{ "name": "shikidown", "version": "${VERSIONS.lib}" }
 \`\`\``,
     },
     {
@@ -193,7 +194,7 @@ console.log(add(2, 3)); // 5
 \`\`\`
 
 \`\`\`json
-{ "name": "shikidown", "version": "1.0.0" }
+{ "name": "shikidown", "version": "${VERSIONS.lib}" }
 \`\`\``,
     },
     {
