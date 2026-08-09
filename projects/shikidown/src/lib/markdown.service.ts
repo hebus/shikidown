@@ -17,6 +17,38 @@ const DEFAULT_LANGUAGES = [
 
 const DEFAULT_CACHE_CAPACITY = 256;
 
+/**
+ * Extrait la fonction plugin de ce qu'un `import()` a rendu.
+ *
+ * Le nombre d'enveloppes `default` dépend du bundler, pas du plugin. Quand esbuild
+ * met un module CommonJS dans son propre chunk paresseux, le `default` du chunk est
+ * l'objet `module.exports` lui-même — qui porte déjà son propre `default` :
+ *
+ *   export { chunkXYZ as default }   //  chunkXYZ === { __esModule: true, default: fn }
+ *
+ * Le serveur de développement, lui, pré-bundle les dépendances en appliquant
+ * l'interop et n'en laisse qu'une. Déballer un nombre fixe de couches marche donc
+ * d'un côté et casse de l'autre : on déballe jusqu'à trouver la fonction.
+ */
+function unwrapPlugin(loaded: unknown): (md: MarkdownItInstance) => void {
+  let candidate = loaded;
+
+  while (candidate && typeof candidate === 'object' && 'default' in candidate) {
+    candidate = (candidate as { default: unknown }).default;
+  }
+
+  if (typeof candidate !== 'function') {
+    throw new Error(
+      '[shikidown] A plugin loader resolved to ' +
+        (candidate === null ? 'null' : typeof candidate) +
+        ' instead of a function. `load` must resolve to a markdown-it plugin, ' +
+        'or to a module whose default export is one.',
+    );
+  }
+
+  return candidate as (md: MarkdownItInstance) => void;
+}
+
 function escapeHtml(str: string): string {
   return str
     .replace(/&/g, '&amp;')
@@ -98,9 +130,7 @@ export class MarkdownService {
     // se téléchargent de front, mais l'ordre de déclaration reste significatif.
     const plugins = await Promise.all(
       (this.config.plugins ?? []).map((source) =>
-        typeof source === 'function'
-          ? Promise.resolve(source)
-          : source.load().then((m) => ('default' in m ? m.default : m)),
+        typeof source === 'function' ? Promise.resolve(source) : source.load().then(unwrapPlugin),
       ),
     );
     for (const plugin of plugins) {

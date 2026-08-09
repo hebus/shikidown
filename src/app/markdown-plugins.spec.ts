@@ -78,8 +78,8 @@ describe('provideMarkdown plugins', () => {
   });
 
   it('unwraps the default export of a lazily imported module', async () => {
-    // `import()` on a CommonJS plugin yields { default: fn } — the shape most
-    // markdown-it plugins arrive in.
+    // `import()` on a CommonJS plugin yields { default: fn } — the shape the dev
+    // server produces, where dependencies are prebundled with esbuild interop.
     const shout = (md: MarkdownItInstance): void => {
       md.renderer.rules['text'] = (tokens, idx) => tokens[idx].content.toUpperCase();
     };
@@ -87,6 +87,30 @@ describe('provideMarkdown plugins', () => {
     const html = await serviceWith([{ load: () => Promise.resolve({ default: shout }) }]).parseAsync('hello');
 
     expect(html).toContain('HELLO');
+  });
+
+  it('unwraps a module whose default is itself a CommonJS namespace', async () => {
+    // The production shape, and the one that shipped broken: when esbuild puts a
+    // CommonJS module in its own lazy chunk, the chunk's default export IS the
+    // module.exports object — which carries its own default:
+    //   export { chunkXYZ as default }   //  chunkXYZ === { __esModule: true, default: fn }
+    // A single unwrap yields that object, and calling it throws "is not a function".
+    const shout = (md: MarkdownItInstance): void => {
+      md.renderer.rules['text'] = (tokens, idx) => tokens[idx].content.toUpperCase();
+    };
+    const commonJsExports = { __esModule: true, default: shout };
+
+    const html = await serviceWith([
+      { load: () => Promise.resolve({ default: commonJsExports } as never) },
+    ]).parseAsync('hello');
+
+    expect(html).toContain('HELLO');
+  });
+
+  it('names the culprit when a loader resolves to something else', async () => {
+    const service = serviceWith([{ load: () => Promise.resolve({ notAPlugin: true } as never) }]);
+
+    await expect(service.parseAsync('x')).rejects.toThrow(/must resolve to a markdown-it plugin/);
   });
 
   it('keeps declaration order when mixing eager and lazy plugins', async () => {

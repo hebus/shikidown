@@ -159,8 +159,13 @@ provideMarkdown({
 ```
 
 Loaders resolve in parallel while the service initialises, then apply in **array order** — the
-position in the list decides precedence, not which download finished first. A module's `default`
-export is unwrapped for you, which is the shape a CommonJS plugin arrives in.
+position in the list decides precedence, not which download finished first.
+
+The `default` export is unwrapped for you, however deeply it is nested. That matters for CommonJS
+plugins: how many `default` wrappers arrive depends on the bundler, not on the plugin. A dev server
+that prebundles its dependencies hands you one; esbuild putting the same package in its own lazy
+chunk hands you two, because the chunk's default export is the `module.exports` object, which
+carries a `default` of its own.
 
 <Callout type="info">
   The lazy form is an object, while `componentModules` accepts a bare `() => import('…')`. There, a
