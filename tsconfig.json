@@ -12,6 +12,9 @@
     "importHelpers": true,
     "target": "ES2022",
     "module": "preserve",
+    // shiki >=4.4 declares [Symbol.dispose]() on its highlighter, which lib ES2022
+    // does not know about. Consumers hit TS2550 without this — see the README.
+    "lib": ["ES2022", "DOM", "DOM.Iterable", "ESNext.Disposable"],
     "paths": {
       "shikidown": ["./projects/shikidown/src/public-api.ts"],
       "shikidown/mermaid": ["./projects/shikidown/mermaid/src/public-api.ts"]
