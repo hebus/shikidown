@@ -49,7 +49,7 @@ from npm.
 ## Installation
 
 ```bash
-npm install shikidown shiki markdown-it @angular/elements
+npm install shikidown shiki @shikijs/langs @shikijs/themes markdown-it @angular/elements
 ```
 
 `markdown-it` v15 ships its own type definitions. On v14, add them separately:
@@ -68,6 +68,8 @@ npm install --save-dev @types/markdown-it   # v14 only
 | `@angular/platform-browser` | `>=22.0.0` |
 | `markdown-it` | `>=14.0.0` |
 | `shiki` | `>=4.4.3` |
+| `@shikijs/langs` | `>=4.4.3` |
+| `@shikijs/themes` | `>=4.4.3` |
 
 > **Required, and easy to miss:** `@angular/elements` turns your components into Custom Elements.
 > It ships as part of Angular, but `ng new` does not add it to `package.json` — so it is usually

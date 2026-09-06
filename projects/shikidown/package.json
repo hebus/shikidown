@@ -11,11 +11,19 @@
     "@angular/core": ">=22.0.0",
     "@angular/elements": ">=22.0.0",
     "@angular/platform-browser": ">=22.0.0",
+    "@shikijs/langs": ">=4.4.3",
+    "@shikijs/themes": ">=4.4.3",
     "markdown-it": ">=14.0.0",
     "mermaid": ">=11.0.0",
     "shiki": ">=4.4.3"
   },
   "peerDependenciesMeta": {
+    "@shikijs/langs": {
+      "optional": false
+    },
+    "@shikijs/themes": {
+      "optional": false
+    },
     "markdown-it": {
       "optional": false
     },
@@ -29,8 +37,6 @@
   "dependencies": {
     "@shikijs/core": "^4.4.3",
     "@shikijs/engine-oniguruma": "^4.4.3",
-    "@shikijs/langs": "^4.4.3",
-    "@shikijs/themes": "^4.4.3",
     "@shikijs/types": "^4.4.3"
   },
   "sideEffects": false

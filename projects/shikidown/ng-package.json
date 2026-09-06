@@ -6,8 +6,6 @@
   "allowedNonPeerDependencies": [
     "@shikijs/core",
     "@shikijs/engine-oniguruma",
-    "@shikijs/langs",
-    "@shikijs/themes",
     "@shikijs/types"
   ],
   "assets": [
