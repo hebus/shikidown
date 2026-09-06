@@ -141,12 +141,18 @@ export class MyComponent {
 
 ```typescript
 provideMarkdown({
-  // Shiki theme — string or dark/light pair
-  // Full intellisense: same type as createHighlighter({ themes })
+  // Shiki theme — string or dark/light pair. Only DEFAULT_THEME_NAMES are preloaded automatically;
+  // anything else needs `extraThemes` (see below).
   theme: { dark: 'github-dark', light: 'catppuccin-latte' },
 
-  // Shiki languages to preload (intellisense matches createHighlighter({ langs }))
+  // Shiki languages to preload, replacing the default set (DEFAULT_LANGUAGE_NAMES)
   languages: ['typescript', 'javascript', 'html', 'css', 'bash', 'json'],
+
+  // Custom languages/themes outside the library's defaults — imported by your app,
+  // so only your app pays for the chunk. Use a `() => import(…)` loader, since
+  // provideMarkdown() is typically called eagerly from app.config.ts.
+  extraLanguages: [() => import('@shikijs/langs/go')],
+  extraThemes: [() => import('@shikijs/themes/dracula')],
 
   // Angular components to embed in Markdown, registered as Custom Elements
   components: {
@@ -173,8 +179,10 @@ provideMarkdown({
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `theme` | `string \| { dark, light }` | `{ dark: 'github-dark', light: 'poimandres' }` | Shiki theme(s). A string uses the same theme for both modes. |
-| `languages` | `StringLiteralUnion<BundledLanguage>[]` | 17 common languages¹ | Shiki languages to preload at startup. |
+| `theme` | `string \| { dark, light }` | `{ dark: 'github-dark', light: 'poimandres' }` | Shiki theme(s). A string uses the same theme for both modes. Only the themes in `DEFAULT_THEME_NAMES` are preloaded automatically — anything else must be supplied via `extraThemes`. |
+| `extraThemes` | `ThemeInput[]` | `[]` | Custom Shiki themes outside `DEFAULT_THEME_NAMES`, e.g. `import dracula from '@shikijs/themes/dracula'`. Imported by your app, so only your app pays for the chunk. |
+| `languages` | `StringLiteralUnion<BundledLanguage>[]` | 16 common languages¹ | Shiki languages to preload at startup, replacing (not extending) the default set. |
+| `extraLanguages` | `LanguageInput[]` | `[]` | Custom Shiki languages outside `DEFAULT_LANGUAGE_NAMES`, e.g. `import go from '@shikijs/langs/go'`. Imported by your app, so only your app pays for the chunk. |
 | `components` | `Record<string, Type<unknown>>` | `{}` | Angular components registered as Custom Elements. |
 | `componentModules` | `ComponentModuleSource[]` | `[]` | Modules whose exported components are registered, selectors read from their decorators. An entry may be a `() => import('…')` loader — see [Lazy-loaded components](#lazy-loaded-components). |
 | `plugins` | `MarkdownItPluginSource[]` | `[]` | markdown-it plugins applied in declaration order. Each entry is either a plugin function, or `{ load: () => import('…') }` to resolve it lazily and keep it out of the initial bundle. A plugin receives `MarkdownItInstance`, the type `shikidown` exports for the markdown-it instance on both v14 and v15. |
@@ -182,7 +190,31 @@ provideMarkdown({
 | `incrementalRendering` | `boolean` | `false` | Enable block-level incremental rendering in `MarkdownComponent`. Has no effect on `MarkdownPipe`. |
 | `blockCacheSize` | `number` | `256` | Maximum number of rendered blocks kept in the LRU cache. |
 
-> ¹ Default languages: `typescript`, `javascript`, `jsx`, `tsx`, `html`, `css`, `scss`, `json`, `yaml`, `bash`, `shell`, `markdown`, `sql`, `python`, `rust`, `go`.
+> ¹ Default languages (`DEFAULT_LANGUAGE_NAMES`): `typescript`, `javascript`, `jsx`, `tsx`, `html`, `css`, `scss`, `json`, `yaml`, `bash`, `shell`, `markdown`, `sql`, `python`, `rust`, `go`.
+> Default themes (`DEFAULT_THEME_NAMES`): `github-dark`, `github-light`, `poimandres`, `catppuccin-latte`.
+
+### Custom languages and themes
+
+`shikidown` only ships the grammars/themes listed above — Shiki has 235+ languages and 60+ themes,
+and statically bundling all of them would defeat the purpose of keeping the initial bundle small.
+Anything outside the defaults must be imported by your own application and passed via
+`extraLanguages`/`extraThemes`:
+
+```typescript
+provideMarkdown({
+  languages: ['typescript'],
+  extraLanguages: [() => import('@shikijs/langs/go')],
+  theme: 'dracula',
+  extraThemes: [() => import('@shikijs/themes/dracula')],
+});
+```
+
+Use the `() => import(…)` loader form, not a static import: `provideMarkdown()` is typically called
+from `app.config.ts`, read eagerly at bootstrap, so a static import would land the grammar/theme in
+your initial bundle instead of a chunk loaded on demand.
+
+A fence whose language isn't loaded (neither a default nor an `extraLanguages` entry) renders
+unhighlighted rather than failing.
 
 ---
 

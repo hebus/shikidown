@@ -13,7 +13,7 @@
     "@angular/platform-browser": ">=22.0.0",
     "markdown-it": ">=14.0.0",
     "mermaid": ">=11.0.0",
-    "shiki": ">=4.0.0"
+    "shiki": ">=4.4.3"
   },
   "peerDependenciesMeta": {
     "markdown-it": {
@@ -25,6 +25,13 @@
     "shiki": {
       "optional": false
     }
+  },
+  "dependencies": {
+    "@shikijs/core": "^4.4.3",
+    "@shikijs/engine-oniguruma": "^4.4.3",
+    "@shikijs/langs": "^4.4.3",
+    "@shikijs/themes": "^4.4.3",
+    "@shikijs/types": "^4.4.3"
   },
   "sideEffects": false
 }

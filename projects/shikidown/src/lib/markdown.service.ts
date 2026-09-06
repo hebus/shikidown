@@ -1,19 +1,55 @@
 import { inject, Injectable, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import MarkdownIt from 'markdown-it';
-import type { BundledTheme, Highlighter, StringLiteralUnion } from 'shiki';
+import type { HighlighterCore, LanguageInput, ThemeInput } from '@shikijs/core';
+import type { BundledLanguage, BundledTheme, StringLiteralUnion } from 'shiki';
 import { MARKDOWN_CONFIG } from './markdown.tokens';
 import type { MarkdownConfig, MarkdownThemePair } from './markdown.config';
 import { type MarkdownItInstance, type MdToken, type ParsedBlock, type RenderedBlock, hashSource } from './markdown.types';
 
-const DEFAULT_LANGUAGES = [
-  'typescript', 'javascript', 'jsx', 'tsx',
-  'html', 'css', 'scss',
-  'json', 'yaml',
-  'bash', 'shell',
-  'markdown', 'sql',
-  'python', 'rust', 'go',
-];
+/**
+ * Loaders pour les langages préchargés par défaut — un `import()` littéral par langage, pas le
+ * registre bundlé de Shiki (`'shiki'` ou `'shiki/langs'`), qui déclare un `import()` statique pour
+ * chacune de ses ~235 grammaires quelle que soit la liste réellement demandée à l'exécution. Un
+ * bundler résout ces appels littéraux au moment du build : importer depuis le registre de Shiki
+ * tirerait ces ~235 cibles dans le graphe de build. `() => import(...)`, pas un import statique en
+ * tête de fichier : `MarkdownService` est `providedIn: 'root'` et atteint dès que `provideMarkdown()`
+ * s'initialise, donc un import statique finirait dans le bundle initial de l'appli plutôt que dans
+ * un chunk chargé à la demande dans `_init()`.
+ */
+const DEFAULT_LANGS: Record<string, LanguageInput> = {
+  typescript: () => import('@shikijs/langs/typescript'),
+  javascript: () => import('@shikijs/langs/javascript'),
+  jsx: () => import('@shikijs/langs/jsx'),
+  tsx: () => import('@shikijs/langs/tsx'),
+  html: () => import('@shikijs/langs/html'),
+  css: () => import('@shikijs/langs/css'),
+  scss: () => import('@shikijs/langs/scss'),
+  json: () => import('@shikijs/langs/json'),
+  yaml: () => import('@shikijs/langs/yaml'),
+  bash: () => import('@shikijs/langs/bash'),
+  shell: () => import('@shikijs/langs/shell'),
+  markdown: () => import('@shikijs/langs/markdown'),
+  sql: () => import('@shikijs/langs/sql'),
+  python: () => import('@shikijs/langs/python'),
+  rust: () => import('@shikijs/langs/rust'),
+  go: () => import('@shikijs/langs/go'),
+};
+
+/** Même rationale que {@link DEFAULT_LANGS} : couvre les défauts codés en dur de
+ * {@link MarkdownService.resolveTheme} (`github-dark`/`poimandres`) et la paire dark/light
+ * documentée dans le README (`github-dark`/`catppuccin-latte`). */
+const DEFAULT_THEMES: Record<string, ThemeInput> = {
+  'github-dark': () => import('@shikijs/themes/github-dark'),
+  'github-light': () => import('@shikijs/themes/github-light'),
+  poimandres: () => import('@shikijs/themes/poimandres'),
+  'catppuccin-latte': () => import('@shikijs/themes/catppuccin-latte'),
+};
+
+/** Noms des langages préchargés par défaut — voir `extraLanguages` sur `MarkdownConfig` pour en ajouter d'autres. */
+export const DEFAULT_LANGUAGE_NAMES = Object.keys(DEFAULT_LANGS) as StringLiteralUnion<BundledLanguage>[];
+/** Noms des thèmes préchargés par défaut — voir `extraThemes` sur `MarkdownConfig` pour en ajouter d'autres. */
+export const DEFAULT_THEME_NAMES = Object.keys(DEFAULT_THEMES) as StringLiteralUnion<BundledTheme>[];
 
 const DEFAULT_CACHE_CAPACITY = 256;
 
@@ -64,7 +100,7 @@ export class MarkdownService {
   private readonly config: MarkdownConfig = inject(MARKDOWN_CONFIG, { optional: true }) ?? {};
 
   private md: MarkdownItInstance | null = null;
-  private highlighter: Highlighter | null = null;
+  private highlighter: HighlighterCore | null = null;
   private initPromise: Promise<void> | null = null;
 
   // Cache LRU simplifié : Map à ordre d'insertion, éviction du plus ancien quand plein.
@@ -87,15 +123,33 @@ export class MarkdownService {
 
   private async _init(): Promise<void> {
     const themes = this.resolveTheme();
-    const langs = this.config.languages ?? DEFAULT_LANGUAGES;
+    const requestedLangs = new Set(this.config.languages ?? DEFAULT_LANGUAGE_NAMES);
+    const requestedThemes = new Set([themes.dark, themes.light]);
 
     let highlightFn: ((code: string, lang: string) => string) | undefined;
 
     if (isPlatformBrowser(this.platformId)) {
-      const { createHighlighter } = await import('shiki');
-      this.highlighter = await createHighlighter({
-        themes: [themes.dark, ...(themes.light !== themes.dark ? [themes.light] : [])],
+      const langs: LanguageInput[] = [
+        ...Object.entries(DEFAULT_LANGS).filter(([id]) => requestedLangs.has(id)).map(([, lang]) => lang),
+        ...(this.config.extraLanguages ?? []),
+      ];
+      const highlighterThemes: ThemeInput[] = [
+        ...Object.entries(DEFAULT_THEMES).filter(([name]) => requestedThemes.has(name)).map(([, theme]) => theme),
+        ...(this.config.extraThemes ?? []),
+      ];
+
+      // Importés ici plutôt qu'en tête de fichier : `MarkdownService` est `providedIn: 'root'`,
+      // donc un import statique de `@shikijs/core`/`@shikijs/engine-oniguruma` (et de leurs
+      // dépendances, dont vscode-textmate) finirait dans le bundle initial de l'appli plutôt que
+      // dans un chunk chargé à la demande ici.
+      const [{ createHighlighterCore }, { createOnigurumaEngine }] = await Promise.all([
+        import('@shikijs/core'),
+        import('@shikijs/engine-oniguruma'),
+      ]);
+      this.highlighter = await createHighlighterCore({
         langs,
+        themes: highlighterThemes,
+        engine: createOnigurumaEngine(import('shiki/wasm')),
       });
 
       const hl = this.highlighter;
@@ -103,7 +157,7 @@ export class MarkdownService {
       const useDualTheme = themes.dark !== themes.light;
 
       highlightFn = (code: string, lang: string): string => {
-        if (!lang || !loadedLangs.has(lang as never)) return '';
+        if (!lang || !loadedLangs.has(lang)) return '';
         try {
           if (useDualTheme) {
             return hl.codeToHtml(code, {

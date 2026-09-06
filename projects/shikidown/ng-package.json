@@ -3,6 +3,13 @@
   "lib": {
     "entryFile": "src/public-api.ts"
   },
+  "allowedNonPeerDependencies": [
+    "@shikijs/core",
+    "@shikijs/engine-oniguruma",
+    "@shikijs/langs",
+    "@shikijs/themes",
+    "@shikijs/types"
+  ],
   "assets": [
     "README.md"
   ],

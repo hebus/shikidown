@@ -24,7 +24,9 @@ The object accepted by [`provideMarkdown()`](/docs/api/provide-markdown). Every 
 ```typescript
 interface MarkdownConfig {
   theme?: StringLiteralUnion<BundledTheme> | MarkdownThemePair;
+  extraThemes?: ThemeInput[];
   languages?: StringLiteralUnion<BundledLanguage>[];
+  extraLanguages?: LanguageInput[];
   components?: Record<string, Type<unknown>>;
   componentModules?: ComponentModuleSource[];
   plugins?: MarkdownItPluginSource[];
@@ -35,8 +37,11 @@ interface MarkdownConfig {
 ```
 
 `theme` and `languages` reuse Shiki's own `StringLiteralUnion` types, so you get the bundled names
-as autocomplete suggestions while still being able to pass a custom one. Field-by-field defaults are
-in [Configuration](/docs/configuration#options).
+as autocomplete suggestions while still being able to pass a custom one — but only the names in
+`DEFAULT_THEME_NAMES`/`DEFAULT_LANGUAGE_NAMES` are actually preloaded by `shikidown` itself.
+`extraThemes`/`extraLanguages` take `ThemeInput`/`LanguageInput`, the raw types `@shikijs/core`
+accepts, for themes/languages your own app imports and preloads on top of those defaults.
+Field-by-field defaults are in [Configuration](/docs/configuration#options).
 
 <Callout type="info">
   `MarkdownItOptions` — `html`, `xhtmlOut`, `breaks`, `langPrefix`, `linkify`, `typographer`,

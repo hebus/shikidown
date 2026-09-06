@@ -32,7 +32,11 @@ export const appConfig: ApplicationConfig = {
       // formula paints.
       plugins: [copyCodePlugin, { load: () => import('@vscode/markdown-it-katex') }],
       theme: { dark: 'github-dark', light: "catppuccin-latte" },
-      languages: ['angular-html', 'angular-ts', 'typescript', 'javascript', 'html', 'css', 'bash', 'json', 'markdown', 'python', 'rust'],
+      languages: ['typescript', 'javascript', 'html', 'css', 'bash', 'json', 'markdown', 'python', 'rust'],
+      // angular-html/angular-ts sont des langages spécifiques Angular, hors de la liste par
+      // défaut de shikidown : la démo les importe elle-même. `app.config.ts` est lu au bootstrap,
+      // donc un import statique ici finirait dans le bundle initial — d'où les loaders paresseux.
+      extraLanguages: [() => import('@shikijs/langs/angular-html'), () => import('@shikijs/langs/angular-ts')],
       incrementalRendering: true,
       components: {
         'demo-counter': DemoCounterComponent,

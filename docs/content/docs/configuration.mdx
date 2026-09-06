@@ -15,6 +15,10 @@ provideMarkdown({
   // Shiki languages to preload at startup
   languages: ['typescript', 'javascript', 'html', 'css', 'bash', 'json'],
 
+  // Languages/themes outside the library's defaults — imported by your app
+  extraLanguages: [],
+  extraThemes: [],
+
   // Angular components registered as Custom Elements
   components: {
     'my-alert': AlertComponent,
@@ -43,14 +47,24 @@ provideMarkdown({
 <TypeTable
   type={{
     theme: {
-      description: 'Shiki theme. A single string uses the same theme for both colour schemes; a pair emits both at once and switches through CSS variables.',
+      description: 'Shiki theme. A single string uses the same theme for both colour schemes; a pair emits both at once and switches through CSS variables. Only the themes in DEFAULT_THEME_NAMES are preloaded automatically.',
       type: 'string | MarkdownThemePair',
       default: "{ dark: 'github-dark', light: 'poimandres' }",
     },
+    extraThemes: {
+      description: 'Custom Shiki themes outside DEFAULT_THEME_NAMES, imported by your own app so only your app pays for the chunk.',
+      type: 'ThemeInput[]',
+      default: '[]',
+    },
     languages: {
-      description: 'Shiki languages preloaded when the highlighter starts. A fence in a language that was not preloaded is rendered unhighlighted rather than failing.',
+      description: 'Shiki languages preloaded when the highlighter starts, replacing (not extending) the default set. A fence in a language that was not preloaded is rendered unhighlighted rather than failing.',
       type: 'StringLiteralUnion<BundledLanguage>[]',
       default: '16 common languages',
+    },
+    extraLanguages: {
+      description: 'Custom Shiki languages outside DEFAULT_LANGUAGE_NAMES, imported by your own app so only your app pays for the chunk.',
+      type: 'LanguageInput[]',
+      default: '[]',
     },
     components: {
       description: 'Angular components registered as Custom Elements, keyed by the selector you will write in the Markdown.',
@@ -109,10 +123,24 @@ Activating the dark values requires a few CSS rules; they are given in
   [`MarkdownService.clearCache()`](/docs/api/markdown-service#clearcache) after the change.
 </Callout>
 
+### Custom themes
+
+Shiki ships 60+ themes, but `shikidown` only statically bundles the four listed above
+(`DEFAULT_THEME_NAMES`) — importing all of them would defeat the purpose of a small initial bundle.
+Any other theme must be imported by your own app and passed via `extraThemes`:
+
+```typescript
+provideMarkdown({ theme: 'dracula', extraThemes: [() => import('@shikijs/themes/dracula')] });
+```
+
+Use the `() => import(…)` loader form, not a static import: `provideMarkdown()` is typically called
+from `app.config.ts`, read eagerly at bootstrap, so a static import would land the theme in the
+initial bundle instead of a chunk loaded on demand.
+
 ## Languages
 
 Shiki loads grammars explicitly. The defaults cover the sixteen languages most often found in
-technical documents:
+technical documents (`DEFAULT_LANGUAGE_NAMES`):
 
 `typescript`, `javascript`, `jsx`, `tsx`, `html`, `css`, `scss`, `json`, `yaml`, `bash`, `shell`,
 `markdown`, `sql`, `python`, `rust`, `go`
@@ -122,12 +150,31 @@ still need:
 
 ```typescript
 provideMarkdown({
-  languages: ['typescript', 'html', 'css', 'angular-ts', 'angular-html'],
+  languages: ['typescript', 'html', 'css'],
 });
 ```
 
 A fence tagged with a language that was not preloaded is emitted as an unhighlighted
 `<pre class="shiki">` block. Nothing throws.
+
+### Custom languages
+
+Shiki ships 235+ languages — statically importing every one of them would defeat the purpose of
+keeping the initial bundle small, which is why only `DEFAULT_LANGUAGE_NAMES` is bundled by
+`shikidown` itself. A language outside that list, such as `angular-ts`/`angular-html` or any
+grammar not in the defaults, must be imported by your own app and passed via `extraLanguages`:
+
+```typescript
+provideMarkdown({
+  languages: ['typescript', 'html', 'css'],
+  extraLanguages: [() => import('@shikijs/langs/angular-ts'), () => import('@shikijs/langs/angular-html')],
+});
+```
+
+Use the `() => import(…)` loader form, not a static import: `provideMarkdown()` is typically called
+from `app.config.ts`, read eagerly at bootstrap, so a static import would land the grammar in the
+initial bundle instead of a chunk loaded on demand. Only your app pays for that extra chunk — other
+consumers of `shikidown` are unaffected.
 
 ## markdown-it options and plugins
 

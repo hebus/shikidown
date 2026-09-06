@@ -1,4 +1,5 @@
 import type { Type } from '@angular/core';
+import type { LanguageInput, ThemeInput } from '@shikijs/core';
 import type { BundledLanguage, BundledTheme, StringLiteralUnion } from 'shiki';
 import type { MarkdownItInstance } from './markdown.types';
 
@@ -58,15 +59,45 @@ export interface MarkdownConfig {
    * - `string` : un seul thème (ex. `'github-dark'`)
    * - `{ dark, light }` : paire de thèmes pour le dual-mode
    *
-   * Bénéficie du même intellisense que `createHighlighter({ themes })`.
+   * Seuls les thèmes de `DEFAULT_THEME_NAMES` sont préchargés automatiquement ; un thème hors de
+   * cette liste doit être fourni via `extraThemes`, sans quoi le code reste non coloré.
    * @default { dark: 'github-dark', light: 'poimandres' }
    */
   theme?: StringLiteralUnion<BundledTheme> | MarkdownThemePair;
   /**
-   * Langages Shiki à précharger.
-   * Bénéficie du même intellisense que `createHighlighter({ langs })`.
+   * Thèmes Shiki additionnels, hors de la liste par défaut de shikidown (`DEFAULT_THEME_NAMES`).
+   * Importé par l'application consommatrice elle-même — seule cette application en paie le chunk.
+   * Le nom sous lequel le référencer dans `theme` est celui que le thème déclare (son champ `name`).
+   *
+   * Le loader paresseux `() => import(...)` est préférable à un import statique en tête de fichier :
+   * `provideMarkdown()` est typiquement appelé depuis `app.config.ts`, lu au bootstrap, donc un
+   * import statique finirait dans le bundle initial plutôt que dans un chunk chargé à la demande.
+   *
+   * @example
+   * ```typescript
+   * provideMarkdown({ theme: 'dracula', extraThemes: [() => import('@shikijs/themes/dracula')] });
+   * ```
+   */
+  extraThemes?: ThemeInput[];
+  /**
+   * Langages Shiki à précharger, par nom, parmi ceux de `DEFAULT_LANGUAGE_NAMES`. Remplace la
+   * liste par défaut plutôt que de l'étendre.
    */
   languages?: StringLiteralUnion<BundledLanguage>[];
+  /**
+   * Langages Shiki additionnels, hors de la liste par défaut de shikidown (`DEFAULT_LANGUAGE_NAMES`).
+   * Importé par l'application consommatrice elle-même — seule cette application en paie le chunk.
+   *
+   * Le loader paresseux `() => import(...)` est préférable à un import statique en tête de fichier :
+   * `provideMarkdown()` est typiquement appelé depuis `app.config.ts`, lu au bootstrap, donc un
+   * import statique finirait dans le bundle initial plutôt que dans un chunk chargé à la demande.
+   *
+   * @example
+   * ```typescript
+   * provideMarkdown({ extraLanguages: [() => import('@shikijs/langs/go')] });
+   * ```
+   */
+  extraLanguages?: LanguageInput[];
   /** Composants Angular enregistrés par sélecteur CSS pour l'embedding dans le Markdown */
   components?: Record<string, Type<unknown>>;
   /**

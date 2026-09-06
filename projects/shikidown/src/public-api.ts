@@ -1,6 +1,6 @@
 export { MarkdownComponent } from './lib/markdown.component';
 export { MarkdownPipe } from './lib/markdown.pipe';
-export { MarkdownService } from './lib/markdown.service';
+export { DEFAULT_LANGUAGE_NAMES, DEFAULT_THEME_NAMES, MarkdownService } from './lib/markdown.service';
 export { provideMarkdown, registerAsCustomElement, registerComponentModules, selectorUsedIn } from './lib/markdown.provider';
 export type {
   ComponentModule,
