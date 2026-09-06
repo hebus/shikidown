@@ -123,9 +123,11 @@ state and change detection.
 
 ## Requirements
 
-shikidown targets **Angular 22 and above**. It has no runtime dependencies of its own — everything
-it uses is a peer dependency you already declare, which keeps it out of your dependency graph
-twice over.
+shikidown targets **Angular 22 and above**. `@angular/*`, `markdown-it` and `shiki` are peer
+dependencies you already declare, so they stay out of your dependency graph twice over. The
+library does pull in a handful of `@shikijs/*` packages directly (`core`, `engine-oniguruma`,
+`langs`, `themes`, `types`) — these are what let it import individual language grammars and themes
+instead of Shiki's full bundle, see [Custom languages](/docs/configuration#custom-languages).
 
 <Callout type="info">
   The library ships **no styles**. Typography is yours to bring; see

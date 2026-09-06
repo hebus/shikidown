@@ -67,7 +67,7 @@ npm install --save-dev @types/markdown-it   # v14 only
 | `@angular/elements` | `>=22.0.0` |
 | `@angular/platform-browser` | `>=22.0.0` |
 | `markdown-it` | `>=14.0.0` |
-| `shiki` | `>=4.0.0` |
+| `shiki` | `>=4.4.3` |
 
 > **Required, and easy to miss:** `@angular/elements` turns your components into Custom Elements.
 > It ships as part of Angular, but `ng new` does not add it to `package.json` — so it is usually
