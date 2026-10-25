@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { MarkdownComponent } from 'shikidown';
 import { LanguageService } from '../../services/language.service';
 import { VERSIONS } from '../../app/app-version';
+import { simulateStream } from '../../app/stream-simulator';
 
 const INITIAL_CONTENT: Record<'fr' | 'en', string> = {
   fr: `# Playground shikidown 🎮
@@ -238,9 +239,6 @@ const UI: Record<
   },
 };
 
-/** Délai entre deux fragments du flux simulé, et taille maximale d'un fragment. */
-const STREAM_INTERVAL_MS = 30;
-const STREAM_MAX_CHUNK = 12;
 
 @Component({
   selector: 'app-playground',
@@ -319,40 +317,27 @@ export class PlaygroundComponent {
   readonly content = signal(INITIAL_CONTENT.fr);
   readonly streaming = signal(false);
 
-  private streamTimer: ReturnType<typeof setTimeout> | undefined;
+  private stopStream: () => void = () => {};
 
   constructor() {
     effect(() => {
       this.content.set(INITIAL_CONTENT[this.lang()]);
     });
-    inject(DestroyRef).onDestroy(() => clearTimeout(this.streamTimer));
+    inject(DestroyRef).onDestroy(() => this.stopStream());
   }
 
-  /**
-   * Rejoue le Markdown de l'éditeur par fragments de taille aléatoire, coupés
-   * n'importe où — au milieu d'un mot, d'un délimiteur ou d'une URL — comme le
-   * ferait un LLM.
-   */
+  /** Rejoue le Markdown de l'éditeur comme un flux LLM, ou interrompt le flux en cours. */
   toggleStream(): void {
-    clearTimeout(this.streamTimer);
+    this.stopStream();
     if (this.streaming()) {
       this.streaming.set(false);
       return;
     }
-
-    const full = this.content();
-    let index = 0;
     this.streaming.set(true);
-
-    const step = () => {
-      index = Math.min(full.length, index + 1 + Math.floor(Math.random() * STREAM_MAX_CHUNK));
-      this.content.set(full.slice(0, index));
-      if (index < full.length) {
-        this.streamTimer = setTimeout(step, STREAM_INTERVAL_MS);
-      } else {
-        this.streaming.set(false);
-      }
-    };
-    step();
+    this.stopStream = simulateStream(
+      this.content(),
+      (text) => this.content.set(text),
+      () => this.streaming.set(false),
+    );
   }
 }
