@@ -13,6 +13,8 @@
     "@angular/platform-browser": ">=22.0.0",
     "@shikijs/langs": ">=4.4.3",
     "@shikijs/themes": ">=4.4.3",
+    "@vscode/markdown-it-katex": ">=1.1.0",
+    "katex": ">=0.16.0",
     "markdown-it": ">=14.0.0",
     "mermaid": ">=11.0.0",
     "shiki": ">=4.4.3"
@@ -23,6 +25,12 @@
     },
     "@shikijs/themes": {
       "optional": false
+    },
+    "@vscode/markdown-it-katex": {
+      "optional": true
+    },
+    "katex": {
+      "optional": true
     },
     "markdown-it": {
       "optional": false

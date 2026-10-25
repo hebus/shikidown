@@ -33,6 +33,10 @@ interface MarkdownConfig {
   markdownOptions?: MarkdownItOptions;
   incrementalRendering?: boolean;
   blockCacheSize?: number;
+  htmlPolicy?: 'sanitize' | 'escape' | 'trusted';
+  sanitize?: SanitizeOptions;
+  repair?: boolean | RepairOptions;
+  animation?: 'none' | 'caret' | 'fade';
 }
 ```
 
@@ -43,11 +47,10 @@ as autocomplete suggestions while still being able to pass a custom one — but 
 accepts, for themes/languages your own app imports and preloads on top of those defaults.
 Field-by-field defaults are in [Configuration](/docs/configuration#options).
 
-<Callout type="info">
-  `MarkdownItOptions` — `html`, `xhtmlOut`, `breaks`, `langPrefix`, `linkify`, `typographer`,
-  `quotes` — is an internal type, not exported. Pass an object literal and TypeScript will check it
-  structurally.
-</Callout>
+`MarkdownItOptions` — `html`, `xhtmlOut`, `breaks`, `langPrefix`, `linkify`, `typographer`,
+`quotes` — is exported since 3.0. So are the streaming types (`BlockParseState`,
+`BlockRenderOptions`, `BlockRenderResult`, `MarkdownStats`, `StreamingAnimation`, `RepairOptions`)
+and `HtmlPolicy`/`SanitizeOptions`.
 
 ---
 

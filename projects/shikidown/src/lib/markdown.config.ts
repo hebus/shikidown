@@ -2,6 +2,8 @@ import type { Type } from '@angular/core';
 import type { LanguageInput, ThemeInput } from '@shikijs/core';
 import type { BundledLanguage, BundledTheme, StringLiteralUnion } from 'shiki';
 import type { MarkdownItInstance } from './markdown.types';
+import type { RepairOptions } from './repair/repair-incomplete-markdown';
+import type { SanitizeOptions } from './sanitize/sanitize-html';
 
 /** Paire de thèmes Shiki pour dark/light mode */
 export interface MarkdownThemePair {
@@ -138,6 +140,21 @@ export interface MarkdownConfig {
   /** Options markdown-it personnalisées, fusionnées avec les défauts */
   markdownOptions?: MarkdownItOptions;
   /**
+   * Traitement du HTML brut présent dans le Markdown :
+   * - `'sanitize'` : filtré par liste blanche — balises de mise en forme, custom
+   *   elements, attributs sans gestionnaire d'événement, URL de protocole admis
+   *   (voir `sanitize`) ;
+   * - `'escape'` : affiché comme du texte ;
+   * - `'trusted'` : inséré tel quel. À réserver à un contenu dont l'application
+   *   maîtrise entièrement l'origine — jamais à la sortie d'un LLM.
+   *
+   * Les liens Markdown suivent la même liste de protocoles, sauf en `'trusted'`.
+   * @default 'sanitize'
+   */
+  htmlPolicy?: HtmlPolicy;
+  /** Règles du filtrage `htmlPolicy: 'sanitize'`. */
+  sanitize?: SanitizeOptions;
+  /**
    * Active le rendu incrémental par blocs dans `MarkdownComponent`.
    * Seuls les blocs dont le texte source a changé sont re-parsés et re-rendus.
    * Les blocs inchangés sont servis depuis le cache → Shiki ne re-colorie pas inutilement.
@@ -146,8 +163,33 @@ export interface MarkdownConfig {
    */
   incrementalRendering?: boolean;
   /**
-   * Taille maximale du cache de blocs rendus (entrées les plus anciennes évincées en premier).
+   * Taille maximale du cache de blocs rendus et de celui des colorations Shiki
+   * (les entrées les moins récemment utilisées sont évincées en premier).
    * @default 256
    */
   blockCacheSize?: number;
+  /**
+   * Réparation provisoire de la fin du document pendant le streaming
+   * (`<shikidown [streaming]="true">`) : délimiteurs fermés, liens et balises
+   * incomplets masqués. `false` la désactive ; un objet règle ses options.
+   * @default true
+   */
+  repair?: boolean | RepairOptions;
+  /**
+   * Repère visuel par défaut des `<shikidown>` en streaming (surchargé par
+   * l'input `animation`). Voir {@link StreamingAnimation}.
+   * @default 'none'
+   */
+  animation?: StreamingAnimation;
 }
+
+/**
+ * - `'none'` : aucun repère ;
+ * - `'caret'` : un curseur fixe (non clignotant) à la fin du texte en cours ;
+ * - `'fade'` : chaque nouveau bloc apparaît en fondu, une seule fois — les blocs
+ *   déjà affichés ne rejouent pas l'animation. Désactivé par
+ *   `prefers-reduced-motion: reduce`.
+ */
+export type StreamingAnimation = 'none' | 'caret' | 'fade';
+
+export type HtmlPolicy = 'sanitize' | 'escape' | 'trusted';

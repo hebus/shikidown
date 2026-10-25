@@ -47,6 +47,11 @@ export const appConfig: ApplicationConfig = {
       incrementalRendering: true,
       // Taille max du cache de blocs (défaut : 256)
       blockCacheSize: 128,
+      // HTML brut : 'sanitize' (défaut), 'escape' ou 'trusted'
+      htmlPolicy: 'sanitize',
+      // Streaming : réparation des syntaxes inachevées, repère visuel
+      repair: { math: true },
+      animation: 'caret',
     }),
   ],
 };
@@ -62,7 +67,11 @@ export const appConfig: ApplicationConfig = {
 | \`plugins\` | \`Array<(md) => void>\` | \`[]\` | Plugins markdown-it supplémentaires |
 | \`markdownOptions\` | \`MarkdownItOptions\` | — | Options markdown-it (html, breaks…) |
 | \`incrementalRendering\` | \`boolean\` | \`false\` | Rendu par blocs avec cache |
-| \`blockCacheSize\` | \`number\` | \`256\` | Capacité du cache LRU de blocs |
+| \`blockCacheSize\` | \`number\` | \`256\` | Capacité du cache LRU de blocs (et de celui des colorations) |
+| \`htmlPolicy\` | \`'sanitize' \\| 'escape' \\| 'trusted'\` | \`'sanitize'\` | Traitement du HTML brut — voir [Sécurité](#/guide#security) |
+| \`sanitize\` | \`SanitizeOptions\` | \`{}\` | Liste blanche : protocoles, balises, \`style\`, custom elements |
+| \`repair\` | \`boolean \\| RepairOptions\` | \`true\` | Réparation de la fin du document pendant le streaming |
+| \`animation\` | \`'none' \\| 'caret' \\| 'fade'\` | \`'none'\` | Repère visuel par défaut du streaming |
 
 ---
 
@@ -94,22 +103,27 @@ provideMarkdown({
 | Ancres sur les titres | [\`markdown-it-anchor\`](https://www.npmjs.com/package/markdown-it-anchor) |
 | Notes de bas de page | [\`markdown-it-footnote\`](https://www.npmjs.com/package/markdown-it-footnote) |
 | Listes de tâches | [\`markdown-it-task-lists\`](https://www.npmjs.com/package/markdown-it-task-lists) |
-| LaTeX via KaTeX | [\`@vscode/markdown-it-katex\`](https://www.npmjs.com/package/@vscode/markdown-it-katex) |
+| LaTeX via KaTeX | \`katexPlugin()\` de \`shikidown/math\` (voir ci-dessous) |
 | Diagrammes Mermaid | [\`mermaid\`](https://www.npmjs.com/package/mermaid) — support natif (voir ci-dessous) |
 | Texte surligné \`==…==\` | [\`markdown-it-mark\`](https://www.npmjs.com/package/markdown-it-mark) |
 
 ### KaTeX — rendu LaTeX
 
 \`\`\`bash
-npm install @vscode/markdown-it-katex
+npm install @vscode/markdown-it-katex katex
 \`\`\`
 
-KaTeX pèse environ 266 Ko : déclarez-le en chargeur paresseux pour qu'il reste hors
-du bundle initial des pages sans formule.
+L'entry point \`shikidown/math\` fournit \`katexPlugin()\`, qui charge KaTeX (environ 266 Ko) à la
+demande : il reste hors du bundle initial des pages sans formule. Il accepte les options du
+plugin, et une formule invalide s'affiche en source sans interrompre le document.
 
 \`\`\`typescript
+import { katexPlugin } from 'shikidown/math';
+
 provideMarkdown({
-  plugins: [{ load: () => import('@vscode/markdown-it-katex') }],
+  plugins: [katexPlugin()],
+  // Pendant un streaming, masque une formule pas encore fermée
+  repair: { math: true },
 })
 \`\`\`
 
@@ -173,6 +187,12 @@ export class DocsComponent {
 > Sans la directive, les blocs \`mermaid\` restent affichés en code brut.
 > \`mermaid\` n'est chargée (\`import('mermaid')\`) que lorsque la directive est réellement utilisée.
 
+Mermaid est initialisé en \`securityLevel: 'strict'\` : le HTML des libellés est encodé et les clics
+scriptés sont désactivés. Pour des diagrammes de confiance qui en ont besoin, posez
+\`mermaidSecurityLevel="loose"\` sur l'hôte. Un diagramme invalide garde sa source affichée sans
+empêcher le rendu des autres, et pendant un streaming un diagramme n'est rendu qu'une fois son
+bloc fermé.
+
 Syntaxe dans le Markdown :
 
 \`\`\`mermaid
@@ -216,7 +236,11 @@ provideMarkdown({ plugins: [monPlugin] })
 | Input | Type | Description |
 |-------|------|-------------|
 | \`content\` | \`string\` | Texte Markdown à rendre |
+| \`streaming\` | \`boolean\` | Contenu en cours de génération — voir [Streaming LLM](#/guide#streaming) |
+| \`incremental\` | \`boolean \\| undefined\` | Rendu par blocs pour cette instance (défaut : la config, ou \`true\` en streaming) |
+| \`animation\` | \`'none' \\| 'caret' \\| 'fade' \\| undefined\` | Repère visuel du streaming |
 | \`components\` | \`Record<string, Type>\` | Composants supplémentaires locaux à ce composant |
+| \`componentModules\` | \`ComponentModuleSource[]\` | Modules de composants, chargeables à la demande |
 
 ### Passer des composants localement
 
@@ -265,14 +289,15 @@ Frappe clavier → md.parse() → groupement en blocs → hash FNV-1a
                                              oui → HTML réutilisé
                                              non → Shiki colorie + cache
                                                          ↓
-                                    @for (track hash) → Angular préserve
-                                    les nœuds DOM des blocs inchangés
+                                    @for (track id) → bloc inchangé : aucune écriture
+                                                      bloc modifié : DOM corrigé en place
 \`\`\`
 
 **Ce qui est préservé entre deux frappes :**
 - Le HTML Shiki des blocs de code inchangés (pas de re-coloration)
-- Les nœuds DOM des blocs inchangés (même référence \`SafeHtml\` → Angular ne réassigne pas \`innerHTML\`)
-- L'état interne des Web Components dans les blocs inchangés (compteurs, formulaires…)
+- Les nœuds DOM des blocs inchangés, qui ne sont pas réécrits
+- Le bloc modifié garde son élément : son DOM est corrigé en place, pas remplacé
+- L'état interne des Web Components, y compris dans le bloc en cours d'édition
 
 Pour vider le cache manuellement (ex. changement de thème Shiki à runtime) :
 
@@ -283,6 +308,48 @@ readonly md = inject(MarkdownService);
 
 switchTheme(): void {
   this.md.clearCache();
+}
+\`\`\`
+
+---
+
+## Streaming LLM
+
+Pour afficher une réponse pendant qu'un LLM la génère, passez le texte accumulé à \`[content]\` et
+\`[streaming]="true"\` tant que la génération dure :
+
+\`\`\`html
+<shikidown [content]="reponse()" [streaming]="enCours()" animation="caret" />
+\`\`\`
+
+Pendant le streaming :
+
+- **la fin du document est réparée pour l'affichage**, sans modifier la source : \`**gras en cou\`
+  s'affiche en gras, un lien tronqué montre son libellé, une balise ou une image incomplète est
+  masquée, une ligne de séparation de tableau en cours est complétée ;
+- **seul le dernier bloc est reparsé** ; les blocs déjà affichés gardent leur élément, et les
+  composants embarqués leur état — même dans le bloc en cours d'écriture ;
+- **un bloc de code ouvert n'est coloré qu'à sa fermeture**, une seule fois ;
+- l'hôte porte \`aria-busy="true"\` : les lecteurs d'écran attendent la fin du flux.
+
+Repasser \`streaming\` à \`false\` déclenche le rendu définitif, depuis la source brute. Essayez-le
+dans le [Playground](#/playground) avec le bouton « Simuler un flux LLM ».
+
+### Personnaliser le curseur
+
+\`animation="caret"\` affiche un curseur fixe en fin de texte, \`'fade'\` fait apparaître chaque
+nouveau bloc en fondu. Les deux sont désactivés par \`prefers-reduced-motion\`. Le curseur se règle
+par variables CSS :
+
+\`\`\`css
+.chat shikidown {
+  --shikidown-caret-content: '●';
+  --shikidown-caret-color: #6366f1;
+  --shikidown-caret-opacity: 1;
+  /* animation fournie ; le curseur ne clignote pas par défaut */
+  --shikidown-caret-animation: shikidown-caret-blink 1s steps(1) infinite;
+  /* durée du fondu de animation="fade" */
+  --shikidown-fade-duration: 250ms;
 }
 \`\`\`
 
@@ -324,6 +391,30 @@ jamais appelé deux fois pour le même sélecteur.
 
 ---
 
+## Sécurité
+
+Un texte produit par un LLM ou saisi par un utilisateur n'est pas fiable. Le HTML brut qu'il
+contient est donc **filtré par défaut** (\`htmlPolicy: 'sanitize'\`) :
+
+- conservés : balises de mise en forme et de structure, custom elements avec leurs attributs ;
+- retirés : gestionnaires d'événements (\`on*\`), \`style\`, \`<script>\`, \`<iframe>\`, \`<form>\`, \`<svg>\`… ;
+- les URL — dans le HTML comme dans les liens Markdown — doivent être relatives ou en \`http\`,
+  \`https\`, \`mailto\` ou \`tel\`.
+
+\`\`\`typescript
+provideMarkdown({
+  sanitize: {
+    allowedProtocols: ['https', 'mailto'],
+    customElements: ['demo-counter', 'demo-alert'], // au lieu de tous les noms valides
+  },
+})
+\`\`\`
+
+\`htmlPolicy: 'escape'\` affiche le HTML comme du texte ; \`htmlPolicy: 'trusted'\` l'insère tel quel,
+comme en 2.x — à réserver à un contenu entièrement maîtrisé par l'application.
+
+---
+
 ## API de MarkdownService
 
 \`\`\`typescript
@@ -351,7 +442,9 @@ export class MyService {
 | \`parseAsync(content)\` | \`Promise<string>\` | Rendu Markdown → HTML complet |
 | \`parse(content)\` | \`string\` | Rendu synchrone — exige \`initialize()\` préalable |
 | \`parseBlocksAsync(content)\` | \`Promise<RenderedBlock[]>\` | Rendu par blocs avec cache LRU |
-| \`clearCache()\` | \`void\` | Vide le cache de blocs (ex. changement de thème) |
+| \`renderBlocksAsync(content, options)\` | \`Promise<BlockRenderResult>\` | Rendu par blocs d'un flux : repasser \`state\` pour ne reparser que la fin |
+| \`getStats()\` / \`resetStats()\` | \`MarkdownStats\` / \`void\` | Compteurs de travail (parsings, rendus, colorations) |
+| \`clearCache()\` | \`void\` | Vide les caches de blocs et de coloration |
 
 ---
 
@@ -397,6 +490,11 @@ import type {
   MarkdownThemePair,   // { dark: string; light: string }
   ParsedBlock,         // Bloc markdown-it avec hash, tokens et source
   RenderedBlock,       // { hash: string; html: string }
+  BlockParseState,     // état à repasser à renderBlocksAsync()
+  MarkdownStats,       // compteurs de travail
+  HtmlPolicy,          // 'sanitize' | 'escape' | 'trusted'
+  SanitizeOptions,     // liste blanche du filtrage
+  StreamingAnimation,  // 'none' | 'caret' | 'fade'
 } from 'shikidown';
 \`\`\`
 `,
@@ -441,6 +539,11 @@ export const appConfig: ApplicationConfig = {
       incrementalRendering: true,
       // Max block cache size (default: 256)
       blockCacheSize: 128,
+      // Raw HTML: 'sanitize' (default), 'escape' or 'trusted'
+      htmlPolicy: 'sanitize',
+      // Streaming: repair of unfinished syntax, visual cue
+      repair: { math: true },
+      animation: 'caret',
     }),
   ],
 };
@@ -456,7 +559,11 @@ export const appConfig: ApplicationConfig = {
 | \`plugins\` | \`Array<(md) => void>\` | \`[]\` | Additional markdown-it plugins |
 | \`markdownOptions\` | \`MarkdownItOptions\` | — | markdown-it options (html, breaks…) |
 | \`incrementalRendering\` | \`boolean\` | \`false\` | Block-level rendering with cache |
-| \`blockCacheSize\` | \`number\` | \`256\` | LRU block cache capacity |
+| \`blockCacheSize\` | \`number\` | \`256\` | LRU block cache capacity (and highlight cache) |
+| \`htmlPolicy\` | \`'sanitize' \\| 'escape' \\| 'trusted'\` | \`'sanitize'\` | Raw HTML handling — see [Security](#/guide#security) |
+| \`sanitize\` | \`SanitizeOptions\` | \`{}\` | Allow-list: protocols, tags, \`style\`, custom elements |
+| \`repair\` | \`boolean \\| RepairOptions\` | \`true\` | Repair of the document end while streaming |
+| \`animation\` | \`'none' \\| 'caret' \\| 'fade'\` | \`'none'\` | Default streaming visual cue |
 
 ---
 
@@ -488,22 +595,27 @@ provideMarkdown({
 | Heading anchors | [\`markdown-it-anchor\`](https://www.npmjs.com/package/markdown-it-anchor) |
 | Footnotes | [\`markdown-it-footnote\`](https://www.npmjs.com/package/markdown-it-footnote) |
 | Task lists | [\`markdown-it-task-lists\`](https://www.npmjs.com/package/markdown-it-task-lists) |
-| LaTeX via KaTeX | [\`@vscode/markdown-it-katex\`](https://www.npmjs.com/package/@vscode/markdown-it-katex) |
+| LaTeX via KaTeX | \`katexPlugin()\` from \`shikidown/math\` (see below) |
 | Mermaid diagrams | [\`mermaid\`](https://www.npmjs.com/package/mermaid) — built-in support (see below) |
 | Highlighted text \`==…==\` | [\`markdown-it-mark\`](https://www.npmjs.com/package/markdown-it-mark) |
 
 ### KaTeX — LaTeX rendering
 
 \`\`\`bash
-npm install @vscode/markdown-it-katex
+npm install @vscode/markdown-it-katex katex
 \`\`\`
 
-KaTeX weighs around 266 kB, so declare it as a lazy loader to keep it out of the
-initial bundle on pages without a formula.
+The \`shikidown/math\` entry point provides \`katexPlugin()\`, which loads KaTeX (around 266 kB) on
+demand, so it stays out of the initial bundle on pages without a formula. It accepts the plugin's
+options, and an invalid formula is shown as source without interrupting the document.
 
 \`\`\`typescript
+import { katexPlugin } from 'shikidown/math';
+
 provideMarkdown({
-  plugins: [{ load: () => import('@vscode/markdown-it-katex') }],
+  plugins: [katexPlugin()],
+  // While streaming, hides a formula that is not closed yet
+  repair: { math: true },
 })
 \`\`\`
 
@@ -567,6 +679,11 @@ export class DocsComponent {
 > Without the directive, \`mermaid\` blocks stay rendered as raw code.
 > \`mermaid\` is only loaded (\`import('mermaid')\`) when the directive is actually used.
 
+Mermaid is initialised with \`securityLevel: 'strict'\`: HTML in labels is encoded and scripted
+clicks are disabled. For trusted diagrams that need them, set \`mermaidSecurityLevel="loose"\` on the
+host. An invalid diagram keeps its source on screen without blocking the others, and while
+streaming a diagram is only rendered once its fence is closed.
+
 Markdown syntax:
 
 \`\`\`mermaid
@@ -610,7 +727,11 @@ provideMarkdown({ plugins: [myPlugin] })
 | Input | Type | Description |
 |-------|------|-------------|
 | \`content\` | \`string\` | Markdown text to render |
+| \`streaming\` | \`boolean\` | Content still being generated — see [LLM streaming](#/guide#streaming) |
+| \`incremental\` | \`boolean \\| undefined\` | Block rendering for this instance (default: the config, or \`true\` while streaming) |
+| \`animation\` | \`'none' \\| 'caret' \\| 'fade' \\| undefined\` | Streaming visual cue |
 | \`components\` | \`Record<string, Type>\` | Additional components local to this instance |
+| \`componentModules\` | \`ComponentModuleSource[]\` | Component modules, loadable on demand |
 
 ### Passing components locally
 
@@ -659,14 +780,15 @@ Keystroke → md.parse() → block grouping → FNV-1a hash
                                     yes → HTML reused
                                     no  → Shiki highlights + caches
                                                ↓
-                             @for (track hash) → Angular preserves
-                             DOM nodes of unchanged blocks
+                             @for (track id) → unchanged block: no write
+                                               changed block: DOM patched in place
 \`\`\`
 
 **What is preserved between keystrokes:**
 - Shiki HTML for unchanged code blocks (no re-highlighting)
-- DOM nodes for unchanged blocks (same \`SafeHtml\` reference → Angular skips \`innerHTML\` reassignment)
-- Internal state of Web Components in unchanged blocks (counters, forms…)
+- DOM nodes for unchanged blocks, which are not rewritten
+- The changed block keeps its element: its DOM is patched in place, not replaced
+- Internal state of Web Components, including in the block being edited
 
 To manually clear the cache (e.g. runtime Shiki theme change):
 
@@ -677,6 +799,47 @@ readonly md = inject(MarkdownService);
 
 switchTheme(): void {
   this.md.clearCache();
+}
+\`\`\`
+
+---
+
+## LLM streaming
+
+To display an answer while an LLM generates it, pass the accumulated text to \`[content]\` and
+\`[streaming]="true"\` while generation runs:
+
+\`\`\`html
+<shikidown [content]="answer()" [streaming]="generating()" animation="caret" />
+\`\`\`
+
+While streaming:
+
+- **the end of the document is repaired for display**, without touching the source: \`**bold in
+  progr\` shows as bold, a truncated link shows its label, an incomplete tag or image is hidden, a
+  table separator row being typed is completed;
+- **only the last block is re-parsed**; blocks already displayed keep their element, and embedded
+  components their state — even in the block being written;
+- **an open code fence is highlighted once, when it closes**;
+- the host carries \`aria-busy="true"\`, so screen readers wait for the end of the stream.
+
+Setting \`streaming\` back to \`false\` triggers the final render, from the raw source. Try it in the
+[Playground](#/playground) with the "Simulate an LLM stream" button.
+
+### Customising the caret
+
+\`animation="caret"\` shows a static caret at the end of the text, \`'fade'\` fades each new block in.
+Both are disabled by \`prefers-reduced-motion\`. The caret is styled through CSS custom properties:
+
+\`\`\`css
+.chat shikidown {
+  --shikidown-caret-content: '●';
+  --shikidown-caret-color: #6366f1;
+  --shikidown-caret-opacity: 1;
+  /* provided animation; the caret does not blink by default */
+  --shikidown-caret-animation: shikidown-caret-blink 1s steps(1) infinite;
+  /* duration of animation="fade" */
+  --shikidown-fade-duration: 250ms;
 }
 \`\`\`
 
@@ -716,6 +879,30 @@ Registration is idempotent — \`customElements.define()\` is never called twice
 
 ---
 
+## Security
+
+Text produced by an LLM or typed by a user is untrusted. Raw HTML in it is therefore **filtered by
+default** (\`htmlPolicy: 'sanitize'\`):
+
+- kept: formatting and structure tags, custom elements with their attributes;
+- removed: event handlers (\`on*\`), \`style\`, \`<script>\`, \`<iframe>\`, \`<form>\`, \`<svg>\`…;
+- URLs — in raw HTML and in Markdown links — must be relative or use \`http\`, \`https\`, \`mailto\` or
+  \`tel\`.
+
+\`\`\`typescript
+provideMarkdown({
+  sanitize: {
+    allowedProtocols: ['https', 'mailto'],
+    customElements: ['demo-counter', 'demo-alert'], // instead of every valid name
+  },
+})
+\`\`\`
+
+\`htmlPolicy: 'escape'\` displays the HTML as text; \`htmlPolicy: 'trusted'\` inserts it untouched, as
+in 2.x — only for content your application fully controls.
+
+---
+
 ## MarkdownService API
 
 \`\`\`typescript
@@ -743,7 +930,9 @@ export class MyService {
 | \`parseAsync(content)\` | \`Promise<string>\` | Render Markdown → full HTML |
 | \`parse(content)\` | \`string\` | Synchronous render — requires prior \`initialize()\` |
 | \`parseBlocksAsync(content)\` | \`Promise<RenderedBlock[]>\` | Block-level render with LRU cache |
-| \`clearCache()\` | \`void\` | Clear the block cache (e.g. theme change) |
+| \`renderBlocksAsync(content, options)\` | \`Promise<BlockRenderResult>\` | Block render of a stream: pass back \`state\` to re-parse only the end |
+| \`getStats()\` / \`resetStats()\` | \`MarkdownStats\` / \`void\` | Work counters (parses, renders, highlights) |
+| \`clearCache()\` | \`void\` | Clear the block and highlight caches |
 
 ---
 
@@ -789,6 +978,11 @@ import type {
   MarkdownThemePair,   // { dark: string; light: string }
   ParsedBlock,         // markdown-it block with hash, tokens and source
   RenderedBlock,       // { hash: string; html: string }
+  BlockParseState,     // state passed back to renderBlocksAsync()
+  MarkdownStats,       // work counters
+  HtmlPolicy,          // 'sanitize' | 'escape' | 'trusted'
+  SanitizeOptions,     // sanitize allow-list
+  StreamingAnimation,  // 'none' | 'caret' | 'fade'
 } from 'shikidown';
 \`\`\`
 `,
@@ -802,7 +996,9 @@ const SECTIONS: Record<'fr' | 'en', { label: string; id: string }[]> = {
     { label: 'Composant shikidown', id: 'composant' },
     { label: 'Pipe markdown', id: 'pipe' },
     { label: 'Rendu incrémental', id: 'incremental' },
+    { label: 'Streaming LLM', id: 'streaming' },
     { label: 'Composants Angular', id: 'embedding' },
+    { label: 'Sécurité', id: 'security' },
     { label: 'MarkdownService API', id: 'api' },
     { label: 'Styles', id: 'styles' },
     { label: 'Types exportés', id: 'types' },
@@ -814,7 +1010,9 @@ const SECTIONS: Record<'fr' | 'en', { label: string; id: string }[]> = {
     { label: 'shikidown Component', id: 'composant' },
     { label: 'markdown Pipe', id: 'pipe' },
     { label: 'Incremental Rendering', id: 'incremental' },
+    { label: 'LLM streaming', id: 'streaming' },
     { label: 'Embedding Angular', id: 'embedding' },
+    { label: 'Security', id: 'security' },
     { label: 'MarkdownService API', id: 'api' },
     { label: 'Styles', id: 'styles' },
     { label: 'Exported types', id: 'types' },
@@ -822,8 +1020,8 @@ const SECTIONS: Record<'fr' | 'en', { label: string; id: string }[]> = {
 };
 
 const SECTION_IDS: Record<'fr' | 'en', string[]> = {
-  fr: ['installation', 'configuration', 'plugins', 'composant', 'pipe', 'incremental', 'embedding', 'api', 'styles', 'types'],
-  en: ['installation', 'configuration', 'plugins', 'composant', 'pipe', 'incremental', 'embedding', 'api', 'styles', 'types'],
+  fr: ['installation', 'configuration', 'plugins', 'composant', 'pipe', 'incremental', 'streaming', 'embedding', 'security', 'api', 'styles', 'types'],
+  en: ['installation', 'configuration', 'plugins', 'composant', 'pipe', 'incremental', 'streaming', 'embedding', 'security', 'api', 'styles', 'types'],
 };
 
 function withAnchors(content: string, ids: string[]): string {

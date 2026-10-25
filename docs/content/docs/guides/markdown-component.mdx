@@ -31,6 +31,21 @@ your typography goes, since the library ships no styles.
       type: 'string',
       default: "''",
     },
+    streaming: {
+      description: 'The content is still being generated: the end of the document is repaired for display, only the last block is re-parsed, and open code fences are highlighted once closed. Set back to false for the final render.',
+      type: 'boolean',
+      default: 'false',
+    },
+    incremental: {
+      description: 'Block-by-block rendering for this instance. Defaults to incrementalRendering from the configuration, or true while streaming.',
+      type: 'boolean | undefined',
+      default: 'undefined',
+    },
+    animation: {
+      description: "Visual cue while streaming: 'none', 'caret' or 'fade'. Defaults to the configuration's animation, then 'none'. Disabled under prefers-reduced-motion.",
+      type: "'none' | 'caret' | 'fade' | undefined",
+      default: 'undefined',
+    },
     components: {
       description: 'Angular components registered as Custom Elements for this instance, merged with those declared in provideMarkdown(). Registration is idempotent.',
       type: 'Record<string, Type<unknown>>',
@@ -68,7 +83,8 @@ skeleton.
 
 <Step>
 
-**Incremental output** — one `<div [innerHTML]>` per root block, tracked by content hash.
+**Incremental output** — one `<div class="shikidown-block">` per root block, tracked by a stable
+id; the block being written carries `data-streaming`.
 
 </Step>
 
@@ -102,14 +118,14 @@ laid out in [Embedding Angular components](/docs/guides/embedding-components#glo
 
 ## Content security
 
-The rendered HTML is passed through `DomSanitizer.bypassSecurityTrustHtml`. This is deliberate:
-sanitising would strip the very Custom Elements the library exists to render, along with Shiki's
-inline colour styles.
+The rendered HTML is not passed through Angular's `DomSanitizer`, which would strip the very Custom
+Elements the library exists to render, along with Shiki's inline colour styles. Raw HTML in the
+Markdown is instead filtered by shikidown's own allow-list (`htmlPolicy: 'sanitize'`, the default)
+— see [Content security](/docs/guides/security).
 
 <Callout type="warn">
-  **Markdown is treated as trusted input.** Do not feed `[content]` with text submitted by
-  untrusted users unless you sanitise it yourself first — `html: true` is on by default, so raw
-  HTML in the source reaches the DOM.
+  `htmlPolicy: 'trusted'` restores the 2.x behaviour, where raw HTML reaches the DOM untouched.
+  Never use it for LLM output or user-submitted text.
 </Callout>
 
 ## Server-side rendering

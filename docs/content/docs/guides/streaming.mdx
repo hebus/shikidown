@@ -1,0 +1,162 @@
+---
+title: Streaming LLM output
+description: Render Markdown while a model is still generating it — repaired endings, stable blocks, deferred highlighting.
+---
+
+An LLM emits its answer in fragments, and a fragment can end anywhere: in the middle of a word, of
+`**bold`, of a link URL, of a table row, inside a code fence. Rendered as-is, each update shows raw
+delimiters, re-highlights every code block, and rebuilds the DOM — embedded components lose their
+state, text selection is lost.
+
+Pass the accumulated text to `[content]`, and `[streaming]="true"` while generation runs:
+
+```typescript
+@Component({
+  imports: [MarkdownComponent],
+  template: `<shikidown [content]="answer()" [streaming]="generating()" animation="caret" />`,
+})
+export class Chat {
+  readonly answer = signal('');
+  readonly generating = signal(false);
+
+  async ask(prompt: string): Promise<void> {
+    this.answer.set('');
+    this.generating.set(true);
+    for await (const chunk of llm.stream(prompt)) {
+      this.answer.update((text) => text + chunk);
+    }
+    this.generating.set(false);
+  }
+}
+```
+
+Setting `streaming` back to `false` triggers the final render, from the raw source.
+
+## What streaming mode does
+
+| | Behaviour |
+|---|---|
+| Parsing | Only the last block is re-parsed when the beginning of the document is unchanged. |
+| Unfinished syntax | The end of the document is repaired for display — see below. The source is never modified. |
+| Code fences | A fence that is still open is shown in the theme's colours but not tokenised; it is highlighted once, when it closes. |
+| Mermaid | A diagram is shown as code until its fence closes, then rendered. |
+| DOM | Blocks keep their element across updates; the block being written is patched in place, not rewritten. |
+| Embedded components | Keep their state, including inside the block being written. |
+| Accessibility | The host carries `aria-busy="true"`, so assistive technologies wait for the end of the stream instead of announcing every fragment. |
+
+Streaming implies [incremental rendering](/docs/guides/incremental-rendering), whatever
+`incrementalRendering` says.
+
+## Repairing the end of the document
+
+`repairIncompleteMarkdown()` builds a **display version** of the text: it only touches the end of
+the document, and only while `streaming` is true.
+
+| Fragment ends with | Shown as |
+|---|---|
+| `**bold in progr` | **bold in progr** |
+| `` `const x = `` | `const x =` |
+| `[the docs](https://exa` | the docs |
+| `![image](https://exa` | *(nothing until the URL is complete)* |
+| `text **` | text |
+| `<my-component attr="` | *(nothing until the tag closes)* |
+| `\| a \| b \|` + `\|--` | a table header |
+| `- ` or `##` alone on the last line | *(hidden)* |
+
+It never closes a delimiter whose meaning is ambiguous: `*` at the start of a line is a list
+marker, `snake_case` is not emphasis, `2 * 3` is arithmetic. Code fences are left alone —
+markdown-it closes an open fence at the end of the document by itself.
+
+With a math plugin, pass `repair: { math: true }` so that an unclosed `$$` block is closed and an
+unclosed inline `$…` formula is hidden until it completes — see
+[Math formulas](#math-formulas).
+
+```typescript
+provideMarkdown({ repair: { math: true } }); // or repair: false to turn it off
+```
+
+The function is exported if you render through your own pipeline:
+
+```typescript
+import { repairIncompleteMarkdown } from 'shikidown';
+
+const display = repairIncompleteMarkdown(partialText);
+```
+
+## Visual cue
+
+`animation` adds an optional cue, also settable for every instance with `provideMarkdown({ animation })`:
+
+- `'none'` (default) — nothing;
+- `'caret'` — a static (non-blinking) caret at the end of the text being written;
+- `'fade'` — each new block fades in once. Blocks already displayed never replay the animation.
+
+Both are disabled under `prefers-reduced-motion: reduce`. Text remains selectable throughout.
+
+### Customising the cue
+
+Set CSS custom properties on `<shikidown>` or any ancestor:
+
+| Property | Default | Effect |
+|---|---|---|
+| `--shikidown-caret-content` | `'▍'` | The caret, as a CSS string: `'█'`, `'_'`, `'●'`… |
+| `--shikidown-caret-color` | `currentColor` | Its colour. |
+| `--shikidown-caret-opacity` | `0.6` | Its opacity. |
+| `--shikidown-caret-animation` | `none` | An animation; `shikidown-caret-blink` is provided. |
+| `--shikidown-fade-duration` | `180ms` | Duration of the `'fade'` cue. |
+
+```css
+.chat shikidown {
+  --shikidown-caret-content: '●';
+  --shikidown-caret-color: var(--brand-500);
+  --shikidown-caret-opacity: 1;
+  --shikidown-caret-animation: shikidown-caret-blink 1s steps(1) infinite;
+}
+```
+
+The caret does not blink by default: a blinking element distracts during a long generation, and
+WCAG 2.2.2 requires that anything blinking for more than five seconds can be paused. Animations
+set this way are still turned off under `prefers-reduced-motion: reduce`.
+
+## Math formulas
+
+The `shikidown/math` entry point loads [KaTeX](https://katex.org) on demand:
+
+```bash
+npm install @vscode/markdown-it-katex katex
+```
+
+```typescript
+import { katexPlugin } from 'shikidown/math';
+
+provideMarkdown({ plugins: [katexPlugin()], repair: { math: true } });
+```
+
+Add `node_modules/katex/dist/katex.min.css` to your styles. An invalid formula is shown as source
+without interrupting the document (`throwOnError: false`), and KaTeX emits MathML for assistive
+technologies.
+
+## Headless use
+
+`MarkdownService.renderBlocksAsync()` exposes the same pipeline. Pass back the `state` of the
+previous render so that only the end of the document is re-parsed:
+
+```typescript
+let state: BlockParseState | undefined;
+
+for await (const text of accumulatedStream) {
+  const result = await md.renderBlocksAsync(text, { previous: state, streaming: true });
+  state = result.state;
+  render(result.blocks);
+}
+```
+
+## Limits
+
+- Only **appending** is optimised. Any change to the beginning of the document — or a reference
+  definition `[id]: url` anywhere in it, since it can change a link further up — costs a full parse.
+  The result is identical either way.
+- markdown-it plugins that keep document-wide state (footnotes, for instance) already render
+  imperfectly block by block; streaming does not change that.
+- The repair works on the last paragraph. A delimiter left open in an earlier line of a blockquote
+  is not closed.

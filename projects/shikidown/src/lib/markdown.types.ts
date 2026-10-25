@@ -35,6 +35,55 @@ export interface RenderedBlock {
 }
 
 /**
+ * État d'un découpage précédent, rendu par `MarkdownService.renderBlocksAsync()`
+ * et à lui repasser au rendu suivant : les blocs qui ne peuvent plus changer ne
+ * sont alors pas reparsés. Opaque pour l'appelant ; toujours cohérent avec sa
+ * propre source, si bien qu'un état périmé ne coûte qu'un parsing complet.
+ */
+export interface BlockParseState {
+  /** Source effectivement parsée (après réparation éventuelle). */
+  readonly source: string;
+  readonly blocks: readonly ParsedBlock[];
+}
+
+export interface BlockRenderOptions {
+  /**
+   * Le document est en cours de génération : sa fin est réparée pour l'affichage
+   * (voir `repairIncompleteMarkdown`) et un bloc de code encore ouvert n'est pas
+   * coloré, sa coloration attendant la fermeture du fence.
+   */
+  streaming?: boolean;
+  /** État du rendu précédent du même document. */
+  previous?: BlockParseState;
+  /** Abandonne le travail si la requête est annulée entre-temps. */
+  signal?: AbortSignal;
+}
+
+export interface BlockRenderResult {
+  readonly blocks: RenderedBlock[];
+  readonly state: BlockParseState;
+}
+
+/**
+ * Compteurs de travail cumulés par `MarkdownService` — pour vérifier, en test ou
+ * en développement, qu'un fragment ne relance pas un travail déjà fait.
+ */
+export interface MarkdownStats {
+  /** Documents parsés en entier. */
+  fullParses: number;
+  /** Documents dont seule la fin a été reparsée. */
+  tailParses: number;
+  /** Blocs rendus (HTML produit). */
+  blockRenders: number;
+  /** Blocs servis depuis le cache. */
+  blockCacheHits: number;
+  /** Appels effectifs à Shiki. */
+  highlights: number;
+  /** Colorations servies depuis le cache. */
+  highlightCacheHits: number;
+}
+
+/**
  * Hash FNV-1a 32-bit — O(n), zéro dépendance.
  * Collision-résistant dans le contexte d'un seul document (4 milliards de buckets).
  */

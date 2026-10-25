@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MarkdownComponent } from 'shikidown';
 import { LanguageService } from '../../services/language.service';
 import { VERSIONS } from '../../app/app-version';
+import { simulateStream } from '../../app/stream-simulator';
 
 const INITIAL_CONTENT: Record<'fr' | 'en', string> = {
   fr: `# Playground shikidown 🎮
@@ -214,10 +215,30 @@ console.log(add(2, 3)); // 5
   ],
 };
 
-const UI: Record<'fr' | 'en', { examples: string; chars: string; clear: string; editor: string; preview: string }> = {
-  fr: { examples: 'Exemples :', chars: 'car.', clear: 'Effacer', editor: 'ÉDITEUR MARKDOWN', preview: 'APERÇU' },
-  en: { examples: 'Examples:', chars: 'chars', clear: 'Clear', editor: 'MARKDOWN EDITOR', preview: 'PREVIEW' },
+const UI: Record<
+  'fr' | 'en',
+  { examples: string; chars: string; clear: string; editor: string; preview: string; stream: string; stop: string }
+> = {
+  fr: {
+    examples: 'Exemples :',
+    chars: 'car.',
+    clear: 'Effacer',
+    editor: 'ÉDITEUR MARKDOWN',
+    preview: 'APERÇU',
+    stream: 'Simuler un flux LLM',
+    stop: 'Arrêter le flux',
+  },
+  en: {
+    examples: 'Examples:',
+    chars: 'chars',
+    clear: 'Clear',
+    editor: 'MARKDOWN EDITOR',
+    preview: 'PREVIEW',
+    stream: 'Simulate an LLM stream',
+    stop: 'Stop the stream',
+  },
 };
+
 
 @Component({
   selector: 'app-playground',
@@ -236,6 +257,11 @@ const UI: Record<'fr' | 'en', { examples: string; chars: string; clear: string; 
           >{{ sample.label }}</button>
         }
         <div class="ml-auto flex items-center gap-2">
+          <button
+            type="button"
+            (click)="toggleStream()"
+            class="rounded-md border border-indigo-200 dark:border-indigo-800 px-3 py-1 text-xs text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+          >{{ streaming() ? ui().stop : ui().stream }}</button>
           <span class="text-xs text-gray-400 dark:text-gray-600 tabular-nums">{{ content().length }} {{ ui().chars }}</span>
           <button
             (click)="content.set('')"
@@ -256,6 +282,7 @@ const UI: Record<'fr' | 'en', { examples: string; chars: string; clear: string; 
             class="flex-1 w-full resize-none p-4 font-mono text-sm text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-950 focus:outline-none leading-relaxed"
             [ngModel]="content()"
             (ngModelChange)="content.set($event)"
+            [readonly]="streaming()"
             spellcheck="false"
             autocomplete="off"
             [placeholder]="lang() === 'fr' ? 'Écrivez votre Markdown ici...' : 'Write your Markdown here...'"
@@ -270,6 +297,8 @@ const UI: Record<'fr' | 'en', { examples: string; chars: string; clear: string; 
           <div class="flex-1 p-6 overflow-auto">
             <shikidown
               [content]="content()"
+              [streaming]="streaming()"
+              animation="caret"
               class="prose prose-slate dark:prose-invert max-w-none"
             />
           </div>
@@ -286,10 +315,29 @@ export class PlaygroundComponent {
   readonly ui      = computed(() => UI[this.lang()]);
   readonly samples = computed(() => SAMPLES[this.lang()]);
   readonly content = signal(INITIAL_CONTENT.fr);
+  readonly streaming = signal(false);
+
+  private stopStream: () => void = () => {};
 
   constructor() {
     effect(() => {
       this.content.set(INITIAL_CONTENT[this.lang()]);
     });
+    inject(DestroyRef).onDestroy(() => this.stopStream());
+  }
+
+  /** Rejoue le Markdown de l'éditeur comme un flux LLM, ou interrompt le flux en cours. */
+  toggleStream(): void {
+    this.stopStream();
+    if (this.streaming()) {
+      this.streaming.set(false);
+      return;
+    }
+    this.streaming.set(true);
+    this.stopStream = simulateStream(
+      this.content(),
+      (text) => this.content.set(text),
+      () => this.streaming.set(false),
+    );
   }
 }

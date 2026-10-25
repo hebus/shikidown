@@ -190,7 +190,11 @@ provideMarkdown({
 | `plugins` | `MarkdownItPluginSource[]` | `[]` | markdown-it plugins applied in declaration order. Each entry is either a plugin function, or `{ load: () => import('…') }` to resolve it lazily and keep it out of the initial bundle. A plugin receives `MarkdownItInstance`, the type `shikidown` exports for the markdown-it instance on both v14 and v15. |
 | `markdownOptions` | `MarkdownItOptions` | — | markdown-it constructor options, merged with the library defaults (`html: true`, `linkify: true`, `typographer: true`). |
 | `incrementalRendering` | `boolean` | `false` | Enable block-level incremental rendering in `MarkdownComponent`. Has no effect on `MarkdownPipe`. |
-| `blockCacheSize` | `number` | `256` | Maximum number of rendered blocks kept in the LRU cache. |
+| `blockCacheSize` | `number` | `256` | Maximum number of rendered blocks kept in the LRU cache (also the capacity of the highlight cache). |
+| `htmlPolicy` | `'sanitize' \| 'escape' \| 'trusted'` | `'sanitize'` | Raw HTML in the Markdown: filtered against an allow-list, displayed as text, or inserted untouched. See [Content security](#content-security). |
+| `sanitize` | `SanitizeOptions` | `{}` | Allow-list settings: `allowedProtocols`, `allowedTags`, `allowStyle`, `customElements`. |
+| `repair` | `boolean \| RepairOptions` | `true` | Display repair of unfinished syntax while streaming; `{ math: true }` also handles `$$` / `$…$`. |
+| `animation` | `'none' \| 'caret' \| 'fade'` | `'none'` | Default visual cue of `<shikidown [streaming]>`. |
 
 > ¹ Default languages (`DEFAULT_LANGUAGE_NAMES`): `typescript`, `javascript`, `jsx`, `tsx`, `html`, `css`, `scss`, `json`, `yaml`, `bash`, `shell`, `markdown`, `sql`, `python`, `rust`, `go`.
 > Default themes (`DEFAULT_THEME_NAMES`): `github-dark`, `github-light`, `poimandres`, `catppuccin-latte`.
@@ -234,6 +238,9 @@ unhighlighted rather than failing.
 | Input | Type | Default | Description |
 |-------|------|---------|-------------|
 | `content` | `string` | `''` | Markdown source to render. |
+| `streaming` | `boolean` | `false` | The content is still being generated — see [Streaming LLM output](#streaming-llm-output). |
+| `incremental` | `boolean \| undefined` | `undefined` | Block-by-block rendering for this instance. Defaults to `incrementalRendering`, or `true` while streaming. |
+| `animation` | `'none' \| 'caret' \| 'fade' \| undefined` | `undefined` | Visual cue while streaming. Disabled under `prefers-reduced-motion`. |
 | `components` | `Record<string, Type<unknown>>` | `{}` | Additional Angular components registered as Custom Elements for this instance only. Merged with those declared in `provideMarkdown()`. |
 | `componentModules` | `ComponentModuleSource[]` | `[]` | Additional modules whose components are registered for this instance, selectors read from their decorators. Accepts `() => import('…')` loaders, which is how you keep a page's components out of the initial bundle — see [Lazy-loaded components](#lazy-loaded-components). |
 
@@ -396,6 +403,48 @@ Two things worth knowing:
 
 ---
 
+## Streaming LLM output
+
+Pass the accumulated text to `[content]`, and `[streaming]="true"` while the model is generating:
+
+```html
+<shikidown [content]="answer()" [streaming]="generating()" animation="caret" />
+```
+
+While streaming:
+
+- the end of the document is **repaired for display** — `**bold in progr` shows as bold, a half-typed
+  link shows its label, a half-typed tag or image is hidden — without modifying the source;
+- only the **last block is re-parsed**, and blocks already displayed keep their DOM element, so
+  embedded components keep their state, even inside the block being written;
+- an **open code fence** is not highlighted until it closes; a Mermaid diagram is shown as code until
+  its fence closes;
+- the host carries `aria-busy="true"`.
+
+Setting `streaming` back to `false` renders the final document from the raw source. Over a whole
+answer, this does several times less work than re-rendering each update: each code block is
+highlighted once instead of once per fragment.
+
+For math, `katexPlugin()` from the `shikidown/math` entry point loads KaTeX on demand:
+
+```typescript
+import { katexPlugin } from 'shikidown/math';
+
+provideMarkdown({ plugins: [katexPlugin()], repair: { math: true } });
+```
+
+---
+
+## Content security
+
+Markdown from an LLM or a user is untrusted input. Since 3.0, raw HTML is filtered by default
+(`htmlPolicy: 'sanitize'`): formatting tags and custom elements are kept, event handlers, `style`,
+`<script>`, `<iframe>` and the like are removed, and URLs — in raw HTML and in Markdown links — must
+be relative or use `http`, `https`, `mailto` or `tel`. `htmlPolicy: 'trusted'` restores the 2.x
+behaviour for content you fully control. `MermaidDirective` defaults to `securityLevel: 'strict'`.
+
+---
+
 ## Incremental rendering
 
 When `incrementalRendering: true`, `MarkdownComponent` renders the document as a **list of independent root blocks** rather than a single HTML string.
@@ -420,14 +469,13 @@ md.parse()  ──►  token grouping (depth-count)  ──►  blocks[]
                          │                   result cached
                          └───────────┬────────────┘
                                      ▼
-             @for (block of displayedBlocks; track block.hash)
+             @for (block of displayedBlocks; track block.id)
                                      │
                          ┌───────────┴────────────┐
-                         │ same SafeHtml ref?      │
+                         │ same HTML as shown?     │
                         yes                        no
                          │                         │
-                  Angular skips              [innerHTML] updated
-                  innerHTML write            → DOM replaced
+                    no DOM write             DOM patched in place
 ```
 
 ### What is preserved between keystrokes
@@ -436,7 +484,7 @@ md.parse()  ──►  token grouping (depth-count)  ──►  blocks[]
 |-|---------------------|-----------------|
 | Shiki re-highlighting | Every block, every time | Only changed blocks |
 | DOM mutation | Full replacement | Only changed block nodes |
-| Web Component state | Lost (counters reset) | Preserved in unchanged blocks |
+| Web Component state | Lost (counters reset) | Preserved, including in the block being edited |
 
 ### Clearing the cache
 
@@ -528,7 +576,9 @@ export class ContentService {
 | `parseAsync` | `(content: string) => Promise<string>` | Renders the full Markdown document, returns raw HTML. |
 | `parse` | `(content: string) => string` | Synchronous render. Throws if called before `initialize()` resolves. |
 | `parseBlocksAsync` | `(content: string) => Promise<RenderedBlock[]>` | Renders as independent blocks with LRU caching. Used internally by `MarkdownComponent` in incremental mode. |
-| `clearCache` | `() => void` | Empties the block LRU cache. |
+| `renderBlocksAsync` | `(content, { previous?, streaming?, signal? }) => Promise<BlockRenderResult>` | Block rendering for streamed documents: pass back the previous `state` and only the end is re-parsed. |
+| `getStats` / `resetStats` | `() => MarkdownStats` / `() => void` | Work counters (parses, renders, highlights, cache hits). |
+| `clearCache` | `() => void` | Empties the block and highlight LRU caches. |
 
 ---
 
@@ -597,6 +647,13 @@ import type {
   ComponentModuleSource, // ComponentModule | (() => Promise<ComponentModule>)
   ParsedBlock,           // { hash, startLine, endLine, tokens, source }
   RenderedBlock,         // { hash: string; html: string }
+  BlockParseState,       // state passed back to renderBlocksAsync()
+  BlockRenderOptions,    // { previous?, streaming?, signal? }
+  MarkdownStats,         // work counters
+  HtmlPolicy,            // 'sanitize' | 'escape' | 'trusted'
+  SanitizeOptions,
+  RepairOptions,
+  StreamingAnimation,    // 'none' | 'caret' | 'fade'
 } from 'shikidown';
 ```
 
@@ -687,7 +744,7 @@ pick the current version to resume.
 
 ## Changelog
 
-Each version is documented on the **[GitHub releases page](https://github.com/hebus/shikidown/releases)** — what changed, why, and the migration steps when there are any.
+See [CHANGELOG.md](CHANGELOG.md) and the **[GitHub releases page](https://github.com/hebus/shikidown/releases)** — what changed, why, and the migration steps when there are any.
 
 ---
 

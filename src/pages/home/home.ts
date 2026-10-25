@@ -1,10 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MarkdownComponent } from 'shikidown';
 import { MermaidDirective } from 'shikidown/mermaid';
 import { LanguageService } from '../../services/language.service';
 import { VERSIONS } from '../../app/app-version';
 import { siteLinks } from '../../app/site-links';
+import { simulateStream } from '../../app/stream-simulator';
+import { STREAM_SAMPLE } from './stream-sample';
 
 const HERO_MD: Record<'fr' | 'en', string> = {
   fr: `
@@ -129,7 +131,7 @@ const KATEX_MD: Record<'fr' | 'en', string> = {
   fr: `
 ## Formules mathématiques
 
-Un plugin markdown-it suffit : les formules KaTeX s'écrivent en ligne avec
+\`katexPlugin()\`, de l'entry point \`shikidown/math\`, charge KaTeX à la demande. Les formules s'écrivent en ligne avec
 \\$...\\$ — comme $E = mc^2$ — ou en bloc avec \\$\\$...\\$\\$.
 
 Une série convergente :
@@ -158,7 +160,7 @@ $$
   en: `
 ## Mathematical formulas
 
-One markdown-it plugin is all it takes: KaTeX formulas go inline with
+\`katexPlugin()\`, from the \`shikidown/math\` entry point, loads KaTeX on demand. Formulas go inline with
 \\$...\\$ — like $E = mc^2$ — or as a block with \\$\\$...\\$\\$.
 
 A convergent series:
@@ -195,7 +197,9 @@ const FEATURES_MD: Record<'fr' | 'en', string> = {
 | \`markdown-it\` | Parsing complet CommonMark + extensions |
 | \`shiki\` v4 | Syntax highlighting multi-thème dark/light |
 | Angular Components | Embedding via Custom Elements (\`@angular/elements\`) |
-| Plugins | Système natif de plugins \`markdown-it\` : KaTeX, Mermaid, footnotes… |
+| Streaming LLM | Fin du document réparée, seul le dernier bloc recalculé, état des composants conservé |
+| Sécurité | HTML brut filtré par liste blanche, protocoles d'URL contrôlés |
+| Plugins | Système natif de plugins \`markdown-it\` ; KaTeX via \`shikidown/math\`, Mermaid via \`shikidown/mermaid\` |
 | Signals | API 100% réactive avec \`resource()\` |
 | TailwindCSS v4 | Styling moderne et dark mode |
 | Pipe async | \`content \| markdown \| async\` |
@@ -219,7 +223,9 @@ export class MonComposantComponent {
 | \`markdown-it\` | Full CommonMark parsing + extensions |
 | \`shiki\` v4 | Multi-theme dark/light syntax highlighting |
 | Angular Components | Embedding via Custom Elements (\`@angular/elements\`) |
-| Plugins | Native \`markdown-it\` plugin system: KaTeX, Mermaid, footnotes… |
+| LLM streaming | Repaired document end, only the last block recomputed, component state kept |
+| Security | Raw HTML filtered against an allow-list, URL protocols checked |
+| Plugins | Native \`markdown-it\` plugin system; KaTeX via \`shikidown/math\`, Mermaid via \`shikidown/mermaid\` |
 | Signals | 100% reactive API with \`resource()\` |
 | TailwindCSS v4 | Modern styling and dark mode |
 | Async pipe | \`content \| markdown \| async\` |
@@ -243,18 +249,43 @@ const FEATURES_CARDS: Record<'fr' | 'en', Array<{ icon: string; title: string; d
     { icon: '⚡', title: 'Composants Angular', desc: 'Insérez vos composants par sélecteur CSS dans le Markdown. Ils sont instanciés dynamiquement.' },
     { icon: '🔄', title: 'Rendu incrémental', desc: 'Seuls les blocs modifiés sont re-parsés. Les Web Components conservent leur état entre les frappes.' },
     { icon: '🔌', title: 'Plugins markdown-it', desc: 'Étendez le rendu avec n\'importe quel plugin : KaTeX pour LaTeX, Mermaid, footnotes, ancres…' },
+    { icon: '💬', title: 'Streaming LLM', desc: 'Affichez une réponse pendant sa génération : syntaxe inachevée réparée, code coloré une fois fermé, rien ne clignote.' },
+    { icon: '🛡️', title: 'Sûr par défaut', desc: 'Le HTML brut est filtré et les URL contrôlées : le texte d\'un LLM ne peut pas injecter de script.' },
   ],
   en: [
     { icon: '🎨', title: 'Shiki v4 Highlighting', desc: 'IDE-quality syntax highlighting with automatic dark/light support via CSS variables.' },
     { icon: '⚡', title: 'Angular Components', desc: 'Insert your components by CSS selector in Markdown. They are instantiated dynamically.' },
     { icon: '🔄', title: 'Incremental rendering', desc: 'Only changed blocks are re-parsed. Web Components preserve their state between keystrokes.' },
     { icon: '🔌', title: 'markdown-it Plugins', desc: 'Extend rendering with any plugin: KaTeX for LaTeX, Mermaid, footnotes, heading anchors…' },
+    { icon: '💬', title: 'LLM streaming', desc: 'Display an answer while it is generated: unfinished syntax repaired, code highlighted once closed, no flicker.' },
+    { icon: '🛡️', title: 'Safe by default', desc: 'Raw HTML is filtered and URLs checked: an LLM\'s output cannot inject a script.' },
   ],
 };
 
-const UI: Record<'fr' | 'en', { start: string; quickstart: string; docs: string }> = {
-  fr: { start: 'Démarrer →', quickstart: 'Démarrage rapide', docs: 'Documentation' },
-  en: { start: 'Get started →', quickstart: 'Quick start', docs: 'Documentation' },
+const UI: Record<
+  'fr' | 'en',
+  { start: string; quickstart: string; docs: string; stream: string; streamIntro: string; play: string; stop: string }
+> = {
+  fr: {
+    start: 'Démarrer →',
+    quickstart: 'Démarrage rapide',
+    docs: 'Documentation',
+    stream: 'Streaming LLM',
+    streamIntro:
+      'La réponse ci-dessous est rejouée par fragments coupés n\'importe où, comme un LLM l\'émettrait. Cliquez sur le compteur pendant le flux : il garde sa valeur.',
+    play: 'Rejouer en flux',
+    stop: 'Arrêter',
+  },
+  en: {
+    start: 'Get started →',
+    quickstart: 'Quick start',
+    docs: 'Documentation',
+    stream: 'LLM streaming',
+    streamIntro:
+      'The answer below is replayed in fragments cut anywhere, as an LLM would emit it. Click the counter during the stream: it keeps its value.',
+    play: 'Replay as a stream',
+    stop: 'Stop',
+  },
 };
 
 @Component({
@@ -312,6 +343,28 @@ const UI: Record<'fr' | 'en', { start: string; quickstart: string; docs: string 
         </div>
       </section>
 
+      <!-- Streaming demo — lancée par un bouton plutôt qu'automatiquement : un contenu qui
+           bouge plus de cinq secondes doit pouvoir être déclenché et arrêté (WCAG 2.2.2) -->
+      <section class="space-y-4">
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+          <h2 class="text-2xl font-bold text-gray-900 dark:text-white">{{ ui().stream }}</h2>
+          <button
+            type="button"
+            (click)="toggleStream()"
+            class="rounded-lg border border-indigo-300 dark:border-indigo-700 px-4 py-2 text-sm font-semibold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+          >{{ streaming() ? ui().stop : ui().play }}</button>
+        </div>
+        <p class="text-sm text-gray-600 dark:text-gray-400">{{ ui().streamIntro }}</p>
+        <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 overflow-hidden">
+          <shikidown
+            [content]="streamMd()"
+            [streaming]="streaming()"
+            animation="caret"
+            class="prose prose-slate dark:prose-invert max-w-none"
+          />
+        </div>
+      </section>
+
       <!-- Mermaid demo -->
       <section class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 overflow-hidden">
         <shikidown mermaid [content]="mermaidMd()" class="prose prose-slate dark:prose-invert max-w-none"/>
@@ -346,4 +399,34 @@ export class HomeComponent {
   readonly featuresMd = computed(() => FEATURES_MD[this.lang()]);
   readonly features  = computed(() => FEATURES_CARDS[this.lang()]);
   readonly ui        = computed(() => UI[this.lang()]);
+
+  readonly streaming = signal(false);
+  /** Texte rejoué ; `null` hors flux, la réponse complète est alors affichée. */
+  private readonly streamed = signal<string | null>(null);
+  readonly streamMd = computed(() => this.streamed() ?? STREAM_SAMPLE[this.lang()]);
+
+  private stopStream: () => void = () => {};
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => this.stopStream());
+  }
+
+  /** Rejoue la réponse d'exemple comme un flux LLM, ou interrompt le flux en cours. */
+  toggleStream(): void {
+    this.stopStream();
+    if (this.streaming()) {
+      this.streaming.set(false);
+      this.streamed.set(null);
+      return;
+    }
+    this.streaming.set(true);
+    this.stopStream = simulateStream(
+      STREAM_SAMPLE[this.lang()],
+      (text) => this.streamed.set(text),
+      () => {
+        this.streaming.set(false);
+        this.streamed.set(null);
+      },
+    );
+  }
 }

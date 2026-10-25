@@ -5,9 +5,27 @@ export { provideMarkdown, registerAsCustomElement, registerComponentModules, sel
 export type {
   ComponentModule,
   ComponentModuleSource,
+  HtmlPolicy,
   MarkdownConfig,
   MarkdownItPlugin,
+  MarkdownItOptions,
   MarkdownItPluginSource,
   MarkdownThemePair,
+  StreamingAnimation,
 } from './lib/markdown.config';
-export type { MarkdownItInstance, ParsedBlock, RenderedBlock } from './lib/markdown.types';
+export type {
+  BlockParseState,
+  BlockRenderOptions,
+  BlockRenderResult,
+  MarkdownItInstance,
+  MarkdownStats,
+  ParsedBlock,
+  RenderedBlock,
+} from './lib/markdown.types';
+export { repairIncompleteMarkdown, type RepairOptions } from './lib/repair/repair-incomplete-markdown';
+export {
+  DEFAULT_ALLOWED_PROTOCOLS,
+  isSafeUrl,
+  sanitizeHtml,
+  type SanitizeOptions,
+} from './lib/sanitize/sanitize-html';

@@ -67,6 +67,17 @@ describe('provideMarkdown plugins', () => {
     expect(html).not.toContain('class="code-block');
   });
 
+  it('escapes the mermaid source in the placeholder body', async () => {
+    // The body used to be injected raw while only the data attribute was escaped:
+    // a diagram containing markup became live HTML, even with `html: false`.
+    const html = await serviceWith([]).parseAsync(
+      fence('mermaid', 'graph TD;\nA[<img src=x onerror=alert(1)>]-->B;'),
+    );
+
+    expect(html).not.toContain('<img');
+    expect(html).toContain('&lt;img');
+  });
+
   it('resolves a lazy plugin loader before rendering', async () => {
     const shout = (md: MarkdownItInstance): void => {
       md.renderer.rules['text'] = (tokens, idx) => tokens[idx].content.toUpperCase();
