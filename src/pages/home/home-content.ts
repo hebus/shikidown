@@ -19,6 +19,8 @@ export interface Stat {
   readonly prefix?: string;
   readonly suffix?: string;
   readonly label: string;
+  /** La même mesure avec shikidown 2.5, affichée barrée à côté de la valeur v3. */
+  readonly v2: string;
   /** Phrase complète lue par les lecteurs d'écran à la place du compteur. */
   readonly spoken: string;
 }
@@ -57,7 +59,9 @@ export interface HomeContent {
     readonly replay: string;
   };
   readonly builtOn: string;
+  readonly statsEyebrow: string;
   readonly statsTitle: string;
+  readonly statsIntro: string;
   readonly stats: readonly Stat[];
   readonly statsNote: string;
   readonly compare: {
@@ -72,6 +76,22 @@ export interface HomeContent {
   readonly featuresTitle: string;
   readonly featuresIntro: string;
   readonly features: readonly Feature[];
+  /** Textes des illustrations des cartes de fonctionnalités. */
+  readonly visuals: {
+    readonly question: string;
+    readonly answerStart: string;
+    readonly answerBold: string;
+    readonly repaired: string;
+    /** Markdown : un vrai composant Angular embarqué. */
+    readonly counter: string;
+    /** Markdown : un extrait coloré par Shiki. */
+    readonly code: string;
+    /** Markdown : une formule rendue par KaTeX. */
+    readonly formula: string;
+    /** Largeurs illustratives, sans valeur mesurée : le premier est le bundle initial. */
+    readonly bundle: readonly { readonly label: string; readonly width: number }[];
+    readonly lazyNote: string;
+  };
   readonly showcaseTitle: string;
   readonly showcaseIntro: string;
   readonly mermaid: string;
@@ -104,6 +124,18 @@ const STEPS_CODE = {
     FENCE,
   ].join('\n'),
 };
+
+const VISUAL_CODE = [
+  FENCE + 'typescript',
+  "const answer = signal('');",
+  'for await (const chunk of stream) {',
+  '  answer.update((t) => t + chunk);',
+  '}',
+  FENCE,
+].join('\n');
+
+// Antislash doublé pour survivre à la chaîne JS, comme pour KATEX plus bas.
+const VISUAL_FORMULA = ['$$', 'e^{i\\pi} + 1 = 0', '$$'].join('\n');
 
 const MERMAID = [
   FENCE + 'mermaid',
@@ -149,12 +181,14 @@ export const HOME_CONTENT: Record<Lang, HomeContent> = {
       replay: 'Rejouer',
     },
     builtOn: 'Construit sur',
+    statsEyebrow: 'v2 → v3',
     statsTitle: 'Moins de travail, à chaque fragment',
+    statsIntro: 'La même réponse streamée mot à mot, rendue par shikidown 2.5 puis par la 3.0 dans la même exécution.',
     stats: [
-      { from: 415, to: 2, label: 'colorations Shiki pour un bloc de 80 lignes streamé mot à mot, au lieu de 415', spoken: '2 colorations Shiki au lieu de 415 pour un bloc de 80 lignes streamé mot à mot' },
-      { from: 1824, to: 10, label: 'parsings complets sur une longue réponse, au lieu de 1 824', spoken: '10 parsings complets au lieu de 1 824 sur une longue réponse' },
-      { from: 1, to: 11, prefix: '×', label: 'plus rapide, au minimum, sur notre benchmark de streaming d’un gros bloc de code', spoken: 'au moins 11 fois plus rapide sur notre benchmark de streaming d’un gros bloc de code' },
-      { from: 20, to: 0, label: 'composant Angular recréé pendant le flux', spoken: 'aucun composant Angular recréé pendant le flux' },
+      { from: 415, to: 2, v2: '415', label: 'colorations Shiki pour un bloc de code de 80 lignes', spoken: '2 colorations Shiki en v3 contre 415 en v2, pour un bloc de code de 80 lignes' },
+      { from: 1824, to: 10, v2: '1 824', label: 'parsings complets du document sur une longue réponse', spoken: '10 parsings complets en v3 contre 1 824 en v2, sur une longue réponse' },
+      { from: 1, to: 11, prefix: '×', v2: '×1', label: 'plus rapide au minimum sur un gros bloc de code', spoken: 'v3 au moins 11 fois plus rapide que v2 sur un gros bloc de code' },
+      { from: 20, to: 0, v2: 'à chaque fragment', label: 'composant Angular recréé dans le bloc en cours d’écriture', spoken: 'v3 ne recrée aucun composant Angular dans le bloc en cours, v2 le recréait à chaque fragment' },
     ],
     statsNote: 'Mesuré par streaming-perf.spec.ts, chemin 2.x contre chemin 3.0 dans la même exécution. Les temps varient selon la machine (×11 à ×17 observés) ; les nombres de colorations et de parsings sont déterministes.',
     compare: {
@@ -176,6 +210,22 @@ export const HOME_CONTENT: Record<Lang, HomeContent> = {
       { icon: 'feather', title: 'Léger et paresseux', desc: 'Langages, thèmes, plugins et composants chargés à la demande : votre bundle initial reste petit.', wide: true },
       { icon: 'shield', title: 'Sûr par défaut', desc: 'HTML brut filtré par liste blanche, URL contrôlées : un LLM ne peut pas injecter de script.' },
     ],
+    visuals: {
+      question: 'Explique-moi les signals',
+      answerStart: 'Un signal est une',
+      answerBold: 'valeur réactive',
+      repaired: 'réparé à l’affichage',
+      counter: '<demo-counter initial-count="3" label="Composant Angular, dans le Markdown"></demo-counter>',
+      code: VISUAL_CODE,
+      formula: VISUAL_FORMULA,
+      bundle: [
+        { label: 'Bundle initial', width: 22 },
+        { label: 'Shiki', width: 58 },
+        { label: 'Mermaid', width: 70 },
+        { label: 'KaTeX', width: 36 },
+      ],
+      lazyNote: 'Chargés seulement quand une page en a besoin',
+    },
     showcaseTitle: 'Diagrammes et formules, dans le même Markdown',
     showcaseIntro: 'Un bloc mermaid devient un SVG, une formule $$ un rendu KaTeX accessible.',
     mermaid: MERMAID,
@@ -212,12 +262,14 @@ export const HOME_CONTENT: Record<Lang, HomeContent> = {
       replay: 'Replay',
     },
     builtOn: 'Built on',
+    statsEyebrow: 'v2 → v3',
     statsTitle: 'Less work, on every fragment',
+    statsIntro: 'The same answer streamed word by word, rendered by shikidown 2.5 then by 3.0 in the same run.',
     stats: [
-      { from: 415, to: 2, label: 'Shiki highlights for an 80-line block streamed word by word, instead of 415', spoken: '2 Shiki highlights instead of 415 for an 80-line block streamed word by word' },
-      { from: 1824, to: 10, label: 'full parses on a long answer, instead of 1,824', spoken: '10 full parses instead of 1,824 on a long answer' },
-      { from: 1, to: 11, prefix: '×', label: 'faster, at the very least, on our large code block streaming benchmark', spoken: 'at least 11 times faster on our large code block streaming benchmark' },
-      { from: 20, to: 0, label: 'Angular components recreated during the stream', spoken: 'no Angular component recreated during the stream' },
+      { from: 415, to: 2, v2: '415', label: 'Shiki highlights for an 80-line code block', spoken: '2 Shiki highlights in v3 against 415 in v2, for an 80-line code block' },
+      { from: 1824, to: 10, v2: '1,824', label: 'full document parses on a long answer', spoken: '10 full parses in v3 against 1,824 in v2, on a long answer' },
+      { from: 1, to: 11, prefix: '×', v2: '×1', label: 'faster, at the very least, on a large code block', spoken: 'v3 at least 11 times faster than v2 on a large code block' },
+      { from: 20, to: 0, v2: 'every fragment', label: 'Angular components recreated in the block being written', spoken: 'v3 recreates no Angular component in the block being written, v2 recreated it on every fragment' },
     ],
     statsNote: 'Measured by streaming-perf.spec.ts, 2.x path against 3.0 path in the same run. Timings depend on the machine (×11 to ×17 observed); highlight and parse counts are deterministic.',
     compare: {
@@ -239,6 +291,22 @@ export const HOME_CONTENT: Record<Lang, HomeContent> = {
       { icon: 'feather', title: 'Light and lazy', desc: 'Languages, themes, plugins and components loaded on demand: your initial bundle stays small.', wide: true },
       { icon: 'shield', title: 'Safe by default', desc: 'Raw HTML filtered against an allow-list, URLs checked: an LLM cannot inject a script.' },
     ],
+    visuals: {
+      question: 'Explain signals to me',
+      answerStart: 'A signal is a',
+      answerBold: 'reactive value',
+      repaired: 'repaired for display',
+      counter: '<demo-counter initial-count="3" label="Angular component, in Markdown"></demo-counter>',
+      code: VISUAL_CODE,
+      formula: VISUAL_FORMULA,
+      bundle: [
+        { label: 'Initial bundle', width: 22 },
+        { label: 'Shiki', width: 58 },
+        { label: 'Mermaid', width: 70 },
+        { label: 'KaTeX', width: 36 },
+      ],
+      lazyNote: 'Loaded only when a page needs them',
+    },
     showcaseTitle: 'Diagrams and formulas, in the same Markdown',
     showcaseIntro: 'A mermaid block becomes an SVG, a $$ formula an accessible KaTeX rendering.',
     mermaid: MERMAID_EN,

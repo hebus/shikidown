@@ -39,9 +39,9 @@ import { whenVisible } from './when-visible';
           <span class="h-3 w-3 rounded-full bg-amber-400"></span>
           <span class="h-3 w-3 rounded-full bg-emerald-400"></span>
         </span>
-        <span class="truncate text-xs font-medium text-gray-600 dark:text-gray-300">{{ labels().title }}</span>
+        <span class="min-w-0 truncate text-xs font-medium text-gray-600 dark:text-gray-300">{{ labels().title }}</span>
         <span class="ml-auto flex items-center gap-2">
-          <span class="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300" aria-live="polite">
+          <span class="flex shrink-0 items-center gap-1.5 whitespace-nowrap text-xs text-gray-600 dark:text-gray-300" aria-live="polite">
             <span
               class="h-2 w-2 rounded-full"
               [class]="playback.state() === 'playing' ? 'bg-emerald-500 motion-safe:animate-pulse' : 'bg-gray-400'"
@@ -52,11 +52,11 @@ import { whenVisible } from './when-visible';
           <button
             type="button"
             (click)="toggle()"
-            class="rounded-md px-2 py-1 text-xs font-semibold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors"
+            class="shrink-0 whitespace-nowrap rounded-md px-2 py-1 text-xs font-semibold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors"
           >{{ action() }}</button>
         </span>
       </div>
-      <div class="grid px-5 py-4 text-left">
+      <div class="grid grid-cols-1 px-5 py-4 text-left">
         <shikidown
           [content]="source()"
           class="invisible prose prose-sm prose-slate dark:prose-invert max-w-none [grid-area:1/1]"

@@ -55,6 +55,9 @@
             },
             "styles": [
               "node_modules/katex/dist/katex.min.css",
+              "node_modules/@fontsource-variable/inter/index.css",
+              "node_modules/@fontsource-variable/plus-jakarta-sans/index.css",
+              "node_modules/@fontsource-variable/jetbrains-mono/index.css",
               "src/styles.css"
             ],
             // Acknowledged CommonJS dependencies. Angular asks that you first look for an

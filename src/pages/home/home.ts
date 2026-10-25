@@ -16,6 +16,7 @@ import { LanguageService } from '../../services/language.service';
 import { siteLinks } from '../../app/site-links';
 import { animateHome } from './home-animations';
 import { HOME_CONTENT, STACK } from './home-content';
+import { FeatureVisualComponent } from './feature-visual';
 import { LiveWindowComponent } from './live-window';
 import { StreamCompareComponent } from './stream-compare';
 import { COMPARE_SAMPLE, STREAM_SAMPLE } from './stream-sample';
@@ -25,7 +26,14 @@ const INSTALL_COMMAND = 'npm i shikidown';
 @Component({
   selector: 'app-home',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, MarkdownComponent, MermaidDirective, LiveWindowComponent, StreamCompareComponent],
+  imports: [
+    RouterLink,
+    MarkdownComponent,
+    MermaidDirective,
+    FeatureVisualComponent,
+    LiveWindowComponent,
+    StreamCompareComponent,
+  ],
   host: { class: 'block', '[class.motion-pending]': 'motionPending()' },
   styles: `
     /* Masqué jusqu'à ce que GSAP ait posé l'état de départ de l'entrée du hero :
@@ -35,6 +43,15 @@ const INSTALL_COMMAND = 'npm i shikidown';
     :host(.motion-pending) [data-anim='hero-fade'],
     :host(.motion-pending) [data-anim='window'] {
       visibility: hidden;
+    }
+
+    /* Plus Jakarta Sans donne au point et à l'apostrophe de larges approches :
+       en corps de titre, ils semblent détachés du mot. */
+    .punct-apostrophe {
+      margin-inline: -0.06em;
+    }
+    .punct-end {
+      margin-inline-start: -0.07em;
     }
 
     .hero-grid {
@@ -84,23 +101,27 @@ const INSTALL_COMMAND = 'npm i shikidown';
               <span aria-hidden="true">→</span>
             </a>
 
-            <h1 class="mt-6 text-4xl font-extrabold leading-[1.08] tracking-tight text-gray-900 dark:text-white sm:text-5xl lg:text-6xl">
+            <h1 class="mt-5 text-4xl font-extrabold leading-[1.02] tracking-[-0.035em] text-gray-900 dark:text-white sm:text-5xl lg:text-6xl">
               @for (line of c().title; track $index) {
                 <span class="block">
                   @for (word of line; track $index) {
-                    <span class="inline-block overflow-hidden pb-[0.12em] align-bottom">
-                      <span data-anim="word" class="inline-block" [class]="word.accent ? accentClass : ''">{{ word.text }}</span>
+                    <span class="-mb-[0.12em] inline-block overflow-hidden pb-[0.12em] align-bottom">
+                      <span data-anim="word" class="inline-block" [class]="word.accent ? accentClass : ''">
+                        @for (part of punctuated(word.text); track $index) {
+                          <span [class]="part.kind">{{ part.text }}</span>
+                        }
+                      </span>
                     </span>{{ ' ' }}
                   }
                 </span>
               }
             </h1>
 
-            <p data-anim="hero-fade" class="mt-6 max-w-xl text-lg leading-relaxed text-gray-600 dark:text-gray-300">
+            <p data-anim="hero-fade" class="mt-5 max-w-xl text-base leading-relaxed text-gray-600 dark:text-gray-300">
               {{ c().subtitle }}
             </p>
 
-            <div data-anim="hero-fade" class="mt-8 flex flex-wrap items-center gap-3">
+            <div data-anim="hero-fade" class="mt-7 flex flex-wrap items-center gap-3">
               <a
                 routerLink="/guide"
                 class="rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-600/30 transition hover:-translate-y-0.5 hover:bg-indigo-700 motion-reduce:transform-none"
@@ -145,13 +166,23 @@ const INSTALL_COMMAND = 'npm i shikidown';
       <div class="mx-auto max-w-6xl space-y-28 px-4 py-24">
         <!-- ─── Chiffres ───────────────────────────────────────────────── -->
         <section>
-          <h2 data-anim="reveal" class="text-center text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl">
-            {{ c().statsTitle }}
-          </h2>
+          <div data-anim="reveal" class="mx-auto max-w-2xl text-center">
+            <span class="inline-flex items-center rounded-full border border-indigo-200 dark:border-indigo-500/30 bg-indigo-50 dark:bg-indigo-500/10 px-3 py-1 font-mono text-xs font-semibold text-indigo-700 dark:text-indigo-300">
+              {{ c().statsEyebrow }}
+            </span>
+            <h2 class="mt-4 text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl">{{ c().statsTitle }}</h2>
+            <p class="mt-4 text-gray-600 dark:text-gray-300">{{ c().statsIntro }}</p>
+          </div>
           <ul data-anim="stagger" class="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4" role="list">
             @for (stat of c().stats; track stat.label) {
-              <li class="rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 p-6">
-                <p class="text-5xl font-extrabold tracking-tight" aria-hidden="true">
+              <li class="flex flex-col rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 p-6">
+                <p class="flex items-center gap-2 text-xs font-semibold" aria-hidden="true">
+                  <span class="rounded-md bg-indigo-600 px-1.5 py-0.5 text-white">v3</span>
+                  <span class="text-gray-500 dark:text-gray-400">
+                    {{ lang() === 'fr' ? 'v2 :' : 'v2:' }} <span class="line-through decoration-rose-500/70 decoration-2">{{ stat.v2 }}</span>
+                  </span>
+                </p>
+                <p class="mt-3 text-5xl font-extrabold tracking-tight" aria-hidden="true">
                   <span [class]="accentClass">{{ stat.prefix ?? '' }}</span><span
                     [class]="accentClass"
                     [attr.data-count-from]="stat.from"
@@ -184,23 +215,26 @@ const INSTALL_COMMAND = 'npm i shikidown';
           <ul data-anim="stagger" class="mt-12 grid gap-5 md:grid-cols-3" role="list">
             @for (feature of c().features; track feature.icon) {
               <li
-                class="feature-card relative overflow-hidden rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 p-7 transition-[translate,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-indigo-500/10 motion-reduce:transform-none"
+                class="feature-card relative overflow-hidden rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 p-5 transition-[translate,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-indigo-500/10 motion-reduce:transform-none"
                 [class.md:col-span-2]="feature.wide"
                 (pointermove)="trackPointer($event)"
               >
-                <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-linear-to-br from-indigo-500 to-fuchsia-500 text-white shadow-lg shadow-indigo-500/30" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    @switch (feature.icon) {
-                      @case ('stream') { <svg:path d="M4 6h16M4 12h10M4 18h6" /><svg:path d="M18 15v6" /> }
-                      @case ('component') { <svg:rect x="3" y="3" width="7" height="7" rx="1.5" /><svg:rect x="14" y="3" width="7" height="7" rx="1.5" /><svg:rect x="3" y="14" width="7" height="7" rx="1.5" /><svg:rect x="14" y="14" width="7" height="7" rx="1.5" /> }
-                      @case ('code') { <svg:path d="m8 7-5 5 5 5M16 7l5 5-5 5M14 4l-4 16" /> }
-                      @case ('shield') { <svg:path d="M12 3 4 6v6c0 4.5 3.4 8.2 8 9 4.6-.8 8-4.5 8-9V6l-8-3Z" /><svg:path d="m9 12 2 2 4-4" /> }
-                      @case ('diagram') { <svg:rect x="3" y="3" width="6" height="6" rx="1" /><svg:rect x="15" y="15" width="6" height="6" rx="1" /><svg:path d="M9 6h4a2 2 0 0 1 2 2v7" /> }
-                      @case ('feather') { <svg:path d="M20 4c-6 0-12 5-12 12v4M8 16h7M10 11h6" /> }
-                    }
-                  </svg>
-                </span>
-                <h3 class="mt-5 text-lg font-semibold text-gray-900 dark:text-white">{{ feature.title }}</h3>
+                <app-feature-visual [kind]="feature.icon" [labels]="c().visuals" />
+                <div class="mt-5 flex items-center gap-3">
+                  <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-indigo-500 to-fuchsia-500 text-white shadow-lg shadow-indigo-500/30" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      @switch (feature.icon) {
+                        @case ('stream') { <svg:path d="M4 6h16M4 12h10M4 18h6" /><svg:path d="M18 15v6" /> }
+                        @case ('component') { <svg:rect x="3" y="3" width="7" height="7" rx="1.5" /><svg:rect x="14" y="3" width="7" height="7" rx="1.5" /><svg:rect x="3" y="14" width="7" height="7" rx="1.5" /><svg:rect x="14" y="14" width="7" height="7" rx="1.5" /> }
+                        @case ('code') { <svg:path d="m8 7-5 5 5 5M16 7l5 5-5 5M14 4l-4 16" /> }
+                        @case ('shield') { <svg:path d="M12 3 4 6v6c0 4.5 3.4 8.2 8 9 4.6-.8 8-4.5 8-9V6l-8-3Z" /><svg:path d="m9 12 2 2 4-4" /> }
+                        @case ('diagram') { <svg:rect x="3" y="3" width="6" height="6" rx="1" /><svg:rect x="15" y="15" width="6" height="6" rx="1" /><svg:path d="M9 6h4a2 2 0 0 1 2 2v7" /> }
+                        @case ('feather') { <svg:path d="M20 4c-6 0-12 5-12 12v4M8 16h7M10 11h6" /> }
+                      }
+                    </svg>
+                  </span>
+                  <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ feature.title }}</h3>
+                </div>
                 <p class="mt-2 leading-relaxed text-gray-600 dark:text-gray-300">{{ feature.desc }}</p>
               </li>
             }
@@ -311,6 +345,14 @@ export class HomeComponent {
         .catch(() => undefined)
         .finally(() => this.motionPending.set(false));
     });
+  }
+
+  /** Découpe un mot du titre pour resserrer sa ponctuation (voir `.punct-*`). */
+  punctuated(text: string): { text: string; kind: string }[] {
+    return text
+      .split(/(’|\.$)/)
+      .filter(Boolean)
+      .map((part) => ({ text: part, kind: part === '’' ? 'punct-apostrophe' : part === '.' ? 'punct-end' : '' }));
   }
 
   format(value: number): string {

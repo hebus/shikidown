@@ -37,7 +37,7 @@ import { whenVisible } from './when-visible';
           </span>
           <span class="mt-0.5 block text-xs text-gray-600 dark:text-gray-400">{{ labels().beforeDesc }}</span>
         </figcaption>
-        <div class="grid px-5 py-4">
+        <div class="grid grid-cols-1 px-5 py-4">
           <shikidown [content]="source()" [class]="ghostClass" aria-hidden="true" inert />
           <shikidown
             [content]="playback.text()"
@@ -54,7 +54,7 @@ import { whenVisible } from './when-visible';
           </span>
           <span class="mt-0.5 block text-xs text-gray-600 dark:text-gray-400">{{ labels().afterDesc }}</span>
         </figcaption>
-        <div class="grid px-5 py-4">
+        <div class="grid grid-cols-1 px-5 py-4">
           <shikidown [content]="source()" [class]="ghostClass" aria-hidden="true" inert />
           <shikidown
             [content]="playback.text()"
