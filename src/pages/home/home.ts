@@ -71,7 +71,7 @@ const INSTALL_COMMAND = 'npm i shikidown';
           <div data-anim="blob" class="absolute top-72 left-[38%] h-[20rem] w-[20rem] rounded-full bg-cyan-300/25 dark:bg-cyan-500/20 blur-3xl"></div>
         </div>
 
-        <div class="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-4 pt-14 pb-20 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:pt-20 lg:pb-28">
+        <div class="mx-auto grid max-w-6xl grid-cols-1 items-start gap-12 px-4 pt-8 pb-20 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:pt-12 lg:pb-24">
           <div>
             <a
               data-anim="pill"
