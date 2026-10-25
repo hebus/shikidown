@@ -17,7 +17,8 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable", "ESNext.Disposable"],
     "paths": {
       "shikidown": ["./projects/shikidown/src/public-api.ts"],
-      "shikidown/mermaid": ["./projects/shikidown/mermaid/src/public-api.ts"]
+      "shikidown/mermaid": ["./projects/shikidown/mermaid/src/public-api.ts"],
+      "shikidown/math": ["./projects/shikidown/math/src/public-api.ts"]
     }
   },
   "angularCompilerOptions": {

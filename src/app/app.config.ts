@@ -6,6 +6,7 @@ import {
   withInMemoryScrolling,
 } from '@angular/router';
 import { provideMarkdown } from 'shikidown';
+import { katexPlugin } from 'shikidown/math';
 import { copyCodePlugin } from './copy-code.plugin';
 import { routes } from './app.routes';
 import { DemoCounterComponent } from '../components/demo-counter/demo-counter';
@@ -30,7 +31,8 @@ export const appConfig: ApplicationConfig = {
       // rather than bundled into the initial chunk. Its stylesheet stays eager
       // (angular.json) — it is small, and it has to be in place before the first
       // formula paints.
-      plugins: [copyCodePlugin, { load: () => import('@vscode/markdown-it-katex') }],
+      plugins: [copyCodePlugin, katexPlugin()],
+      repair: { math: true },
       theme: { dark: 'github-dark', light: "catppuccin-latte" },
       languages: ['typescript', 'javascript', 'html', 'css', 'bash', 'json', 'markdown', 'python', 'rust'],
       // angular-html/angular-ts sont des langages spécifiques Angular, hors de la liste par
