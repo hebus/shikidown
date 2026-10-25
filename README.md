@@ -667,6 +667,24 @@ routing, because GitHub Pages only falls back to the `404.html` at the root of a
 
 ---
 
+## Releasing
+
+```bash
+npm run release
+```
+
+Run from `develop` (current major) or a maintenance branch `N.x`, clean and in sync with `origin`,
+logged in to npm and `gh`. The script asks for the bump, then updates
+`projects/shikidown/package.json` and `src/app/app-version.ts`, runs the tests, builds the library,
+commits `chore(shikidown): release X.Y.Z`, pushes the `vX.Y.Z` tag, publishes `dist/shikidown` and
+creates the GitHub release.
+
+A version from an older major than npm's `latest` is published under the `vN-lts` dist-tag, so a
+2.x patch never moves `latest` back. Every step is idempotent: after a failure, run it again and
+pick the current version to resume.
+
+---
+
 ## Changelog
 
 Each version is documented on the **[GitHub releases page](https://github.com/hebus/shikidown/releases)** — what changed, why, and the migration steps when there are any.
