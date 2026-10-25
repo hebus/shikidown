@@ -55,7 +55,6 @@ export interface HomeContent {
     readonly pause: string;
     readonly resume: string;
     readonly replay: string;
-    readonly region: string;
   };
   readonly builtOn: string;
   readonly statsTitle: string;
@@ -148,7 +147,6 @@ export const HOME_CONTENT: Record<Lang, HomeContent> = {
       pause: 'Mettre en pause',
       resume: 'Reprendre',
       replay: 'Rejouer',
-      region: 'Réponse générée en direct',
     },
     builtOn: 'Construit sur',
     statsTitle: 'Moins de travail, à chaque fragment',
@@ -212,7 +210,6 @@ export const HOME_CONTENT: Record<Lang, HomeContent> = {
       pause: 'Pause',
       resume: 'Resume',
       replay: 'Replay',
-      region: 'Answer generated live',
     },
     builtOn: 'Built on',
     statsTitle: 'Less work, on every fragment',

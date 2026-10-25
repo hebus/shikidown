@@ -19,6 +19,9 @@ import { whenVisible } from './when-visible';
  * Le même flux, coupé aux mêmes endroits, rendu deux fois : en Markdown classique
  * (recalcul de chaque fragment, sans réparation) et par shikidown en streaming.
  * Les deux panneaux lisent le même signal, la comparaison est donc exacte.
+ *
+ * Chaque panneau rend aussi le texte complet, invisible, dans la même cellule de
+ * grille : il prend sa hauteur finale dès le départ, sans barre de défilement.
  */
 @Component({
   selector: 'app-stream-compare',
@@ -34,11 +37,12 @@ import { whenVisible } from './when-visible';
           </span>
           <span class="mt-0.5 block text-xs text-gray-600 dark:text-gray-400">{{ labels().beforeDesc }}</span>
         </figcaption>
-        <div class="h-80 overflow-y-auto px-5 py-4" role="region" tabindex="0" [attr.aria-label]="labels().before">
+        <div class="grid px-5 py-4">
+          <shikidown [content]="source()" [class]="ghostClass" aria-hidden="true" inert />
           <shikidown
             [content]="playback.text()"
             [incremental]="true"
-            class="prose prose-sm prose-slate dark:prose-invert max-w-none"
+            class="prose prose-sm prose-slate dark:prose-invert max-w-none [grid-area:1/1]"
           />
         </div>
       </figure>
@@ -50,12 +54,13 @@ import { whenVisible } from './when-visible';
           </span>
           <span class="mt-0.5 block text-xs text-gray-600 dark:text-gray-400">{{ labels().afterDesc }}</span>
         </figcaption>
-        <div class="h-80 overflow-y-auto px-5 py-4" role="region" tabindex="0" [attr.aria-label]="labels().after">
+        <div class="grid px-5 py-4">
+          <shikidown [content]="source()" [class]="ghostClass" aria-hidden="true" inert />
           <shikidown
             [content]="playback.text()"
             [streaming]="streaming()"
             animation="caret"
-            class="prose prose-sm prose-slate dark:prose-invert max-w-none"
+            class="prose prose-sm prose-slate dark:prose-invert max-w-none [grid-area:1/1]"
           />
         </div>
       </figure>
@@ -79,6 +84,9 @@ export class StreamCompareComponent {
 
   // Assez lent pour que l'œil voie la différence entre les deux panneaux.
   readonly playback = new StreamPlayback(() => this.source(), { intervalMs: 70, maxChunk: 5 });
+
+  /** Rendu complet invisible qui réserve la hauteur finale du panneau. */
+  protected readonly ghostClass = 'invisible prose prose-sm prose-slate dark:prose-invert max-w-none [grid-area:1/1]';
 
   protected readonly streaming = computed(() => {
     const state = this.playback.state();

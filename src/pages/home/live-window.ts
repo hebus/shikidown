@@ -9,9 +9,7 @@ import {
   inject,
   input,
   untracked,
-  viewChild,
 } from '@angular/core';
-import { DOCUMENT } from '@angular/common';
 import { MarkdownComponent } from 'shikidown';
 import { StreamPlayback } from '../../app/stream-simulator';
 import type { HomeContent } from './home-content';
@@ -23,6 +21,10 @@ import { whenVisible } from './when-visible';
  * La lecture démarre quand la fenêtre devient visible, sauf si l'utilisateur a
  * demandé à réduire les animations : la réponse complète est alors affichée.
  * Elle dure plus de cinq secondes, d'où le bouton pause (WCAG 2.2.2).
+ *
+ * La réponse complète est rendue une seconde fois, invisible, dans la même
+ * cellule de grille : elle donne à la fenêtre sa hauteur finale. Ni barre de
+ * défilement, ni page qui se décale pendant que le texte s'écrit.
  */
 @Component({
   selector: 'app-live-window',
@@ -54,18 +56,18 @@ import { whenVisible } from './when-visible';
           >{{ action() }}</button>
         </span>
       </div>
-      <div
-        #scroller
-        class="h-[26rem] overflow-y-auto px-5 py-4 text-left"
-        role="region"
-        tabindex="0"
-        [attr.aria-label]="labels().region"
-      >
+      <div class="grid px-5 py-4 text-left">
+        <shikidown
+          [content]="source()"
+          class="invisible prose prose-sm prose-slate dark:prose-invert max-w-none [grid-area:1/1]"
+          aria-hidden="true"
+          inert
+        />
         <shikidown
           [content]="playback.text()"
           [streaming]="playback.state() === 'playing' || playback.state() === 'paused'"
           animation="caret"
-          class="prose prose-sm prose-slate dark:prose-invert max-w-none"
+          class="prose prose-sm prose-slate dark:prose-invert max-w-none [grid-area:1/1]"
         />
       </div>
     </div>
@@ -76,8 +78,6 @@ export class LiveWindowComponent {
   readonly labels = input.required<HomeContent['window']>();
 
   readonly playback = new StreamPlayback(() => this.source(), { intervalMs: 40, maxChunk: 8 });
-
-  private readonly scroller = viewChild.required<ElementRef<HTMLElement>>('scroller');
 
   protected readonly status = computed(() => {
     const labels = this.labels();
@@ -105,7 +105,6 @@ export class LiveWindowComponent {
 
   constructor() {
     const host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
-    const win = inject(DOCUMENT).defaultView;
     const destroyRef = inject(DestroyRef);
     destroyRef.onDestroy(() => this.playback.destroy());
 
@@ -113,16 +112,6 @@ export class LiveWindowComponent {
     effect(() => {
       this.source();
       untracked(() => this.playback.showAll());
-    });
-
-    // Suit la fin du texte pendant la génération, sauf si le lecteur est remonté.
-    effect(() => {
-      this.playback.text();
-      if (untracked(() => this.playback.state()) !== 'playing') return;
-      const el = this.scroller().nativeElement;
-      if (el.scrollHeight - el.scrollTop - el.clientHeight < 120) {
-        win?.requestAnimationFrame(() => (el.scrollTop = el.scrollHeight));
-      }
     });
 
     afterNextRender(() => {
