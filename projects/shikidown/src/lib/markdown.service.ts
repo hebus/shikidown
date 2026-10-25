@@ -197,7 +197,8 @@ export class MarkdownService {
     this.md.renderer.rules['fence'] = (tokens, idx, options, env, self) => {
       const token = tokens[idx];
       if (token.info.trim() === 'mermaid') {
-        return `<pre class="mermaid" data-mermaid-src="${escapeHtml(token.content.trim())}">${token.content.trim()}</pre>`;
+        const source = escapeHtml(token.content.trim());
+        return `<pre class="mermaid" data-mermaid-src="${source}">${source}</pre>`;
       }
       return originalFence
         ? originalFence(tokens, idx, options, env, self)
