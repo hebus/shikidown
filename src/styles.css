@@ -4,6 +4,26 @@
 /* Dark mode via classe .dark sur <html> */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ─── Polices ───────────────────────────────────────────────────────────────
+   Auto-hébergées (Fontsource, angular.json) : aucune requête vers un service tiers.
+   Inter pour le texte, Plus Jakarta Sans pour les titres, JetBrains Mono pour le code. */
+
+@theme {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Plus Jakarta Sans Variable', 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+@layer base {
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+  }
+
+  code, kbd, samp, pre {
+    font-family: var(--font-mono);
+  }
+}
+
 /* ─── Offset de scroll pour le header sticky ───────────────────────────── */
 
 :root {
