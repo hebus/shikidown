@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [develop]
+    branches: [develop, 2.x]
   pull_request:
   workflow_dispatch:
 
@@ -72,8 +72,9 @@ jobs:
     name: Build documentation site
     # Nothing reaches Pages until both markdown-it legs are green.
     needs: verify
-    # A pull request builds nothing: deployment is for develop and manual runs only.
-    if: github.event_name != 'pull_request'
+    # A pull request builds nothing: deployment is for develop only, on push or manual run.
+    # The site documents the current major, so the 2.x maintenance branch never deploys.
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
     permissions:
       contents: read
