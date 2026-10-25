@@ -87,15 +87,18 @@ import { MarkdownHtmlDirective } from './markdown-html.directive';
       overflow-x: auto;
     }
 
+    /* Curseur personnalisable par variables CSS, posées sur <shikidown> ou un ancêtre. */
     shikidown.shikidown-caret .shikidown-block[data-streaming] > :last-child:not(ul, ol)::after,
     shikidown.shikidown-caret .shikidown-block[data-streaming] > :is(ul, ol):last-child > li:last-child::after {
-      content: '▍';
+      content: var(--shikidown-caret-content, '▍');
       margin-inline-start: 0.1em;
-      opacity: 0.6;
+      color: var(--shikidown-caret-color, currentColor);
+      opacity: var(--shikidown-caret-opacity, 0.6);
+      animation: var(--shikidown-caret-animation, none);
     }
 
     shikidown.shikidown-fade .shikidown-block {
-      animation: shikidown-fade-in 180ms ease-out;
+      animation: shikidown-fade-in var(--shikidown-fade-duration, 180ms) ease-out;
     }
 
     @keyframes shikidown-fade-in {
@@ -104,8 +107,17 @@ import { MarkdownHtmlDirective } from './markdown-html.directive';
       }
     }
 
+    /* Fourni pour --shikidown-caret-animation, qui ne clignote pas par défaut. */
+    @keyframes shikidown-caret-blink {
+      50% {
+        opacity: 0;
+      }
+    }
+
     @media (prefers-reduced-motion: reduce) {
-      shikidown.shikidown-fade .shikidown-block {
+      shikidown.shikidown-fade .shikidown-block,
+      shikidown.shikidown-caret .shikidown-block[data-streaming] > :last-child:not(ul, ol)::after,
+      shikidown.shikidown-caret .shikidown-block[data-streaming] > :is(ul, ol):last-child > li:last-child::after {
         animation: none;
       }
     }

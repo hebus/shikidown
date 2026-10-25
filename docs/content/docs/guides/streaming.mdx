@@ -93,6 +93,31 @@ const display = repairIncompleteMarkdown(partialText);
 
 Both are disabled under `prefers-reduced-motion: reduce`. Text remains selectable throughout.
 
+### Customising the cue
+
+Set CSS custom properties on `<shikidown>` or any ancestor:
+
+| Property | Default | Effect |
+|---|---|---|
+| `--shikidown-caret-content` | `'▍'` | The caret, as a CSS string: `'█'`, `'_'`, `'●'`… |
+| `--shikidown-caret-color` | `currentColor` | Its colour. |
+| `--shikidown-caret-opacity` | `0.6` | Its opacity. |
+| `--shikidown-caret-animation` | `none` | An animation; `shikidown-caret-blink` is provided. |
+| `--shikidown-fade-duration` | `180ms` | Duration of the `'fade'` cue. |
+
+```css
+.chat shikidown {
+  --shikidown-caret-content: '●';
+  --shikidown-caret-color: var(--brand-500);
+  --shikidown-caret-opacity: 1;
+  --shikidown-caret-animation: shikidown-caret-blink 1s steps(1) infinite;
+}
+```
+
+The caret does not blink by default: a blinking element distracts during a long generation, and
+WCAG 2.2.2 requires that anything blinking for more than five seconds can be paused. Animations
+set this way are still turned off under `prefers-reduced-motion: reduce`.
+
 ## Math formulas
 
 The `shikidown/math` entry point loads [KaTeX](https://katex.org) on demand:
