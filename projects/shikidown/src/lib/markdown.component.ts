@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   effect,
   inject,
   Injector,
@@ -9,14 +10,17 @@ import {
   resource,
   signal,
   Type,
+  ViewEncapsulation,
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import type { SafeHtml } from '@angular/platform-browser';
 import { DomSanitizer } from '@angular/platform-browser';
 import { MarkdownService } from './markdown.service';
 import { registerAsCustomElement, registerComponentModules, selectorUsedIn } from './markdown.provider';
 import { MARKDOWN_CONFIG } from './markdown.tokens';
-import type { ComponentModuleSource } from './markdown.config';
+import type { ComponentModuleSource, StreamingAnimation } from './markdown.config';
+import type { BlockParseState } from './markdown.types';
+import { assignBlockIds, type KeyedBlock } from './block-identity';
+import { MarkdownHtmlDirective } from './markdown-html.directive';
 
 /**
  * Composant principal de rendu Markdown.
@@ -25,19 +29,36 @@ import type { ComponentModuleSource } from './markdown.config';
  * comme Web Components (Custom Elements) afin d'être reconnus par le navigateur
  * lorsqu'ils apparaissent dans le HTML rendu.
  *
+ * Pour un texte généré par un LLM, passer le texte accumulé à `[content]` et
+ * `[streaming]="true"` tant que la génération dure : la fin du document est
+ * réparée pour l'affichage, seuls les derniers blocs sont recalculés, et les
+ * blocs déjà affichés — avec les composants qu'ils contiennent — sont conservés.
+ *
  * @example
  * <shikidown [content]="md" class="prose dark:prose-invert max-w-none" />
+ * <shikidown [content]="answer()" [streaming]="generating()" />
  */
 @Component({
   selector: 'shikidown',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'block' },
+  // Le HTML injecté n'est pas concerné par l'encapsulation émulée : les règles
+  // ci-dessous sont préfixées par `shikidown` pour rester confinées.
+  encapsulation: ViewEncapsulation.None,
+  imports: [MarkdownHtmlDirective],
+  host: {
+    class: 'block',
+    '[class.shikidown-caret]': "animationMode() === 'caret'",
+    '[class.shikidown-fade]': "animationMode() === 'fade'",
+    // Les technologies d'assistance attendent la fin du flux plutôt que d'annoncer
+    // chaque fragment.
+    '[attr.aria-busy]': "streaming() ? 'true' : null",
+  },
   template: `
     @if (
       (renderResource.isLoading() && renderResource.value() === undefined) ||
       (blockResource.isLoading() && !displayedBlocks().length)
     ) {
-      <div class="animate-pulse space-y-3 py-2">
+      <div class="animate-pulse motion-reduce:animate-none space-y-3 py-2">
         <div class="h-5 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
         <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
         <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
@@ -47,14 +68,46 @@ import type { ComponentModuleSource } from './markdown.config';
       <div class="rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 text-red-700 dark:text-red-400 text-sm">
         <strong>Render error:</strong> {{ renderResource.error() ?? blockResource.error() }}
       </div>
-    } @else if (incrementalMode) {
+    } @else if (incrementalMode()) {
       <div class="shikidown-content">
-        @for (block of displayedBlocks(); track block.hash) {
-          <div [innerHTML]="block.html"></div>
+        @for (block of displayedBlocks(); track block.id) {
+          <div
+            class="shikidown-block"
+            [shikidownHtml]="block.html"
+            [attr.data-streaming]="streaming() && $last ? '' : null"
+          ></div>
         }
       </div>
     } @else {
       <div [innerHTML]="renderResource.value()" class="shikidown-content"></div>
+    }
+  `,
+  styles: `
+    shikidown .shikidown-table {
+      overflow-x: auto;
+    }
+
+    shikidown.shikidown-caret .shikidown-block[data-streaming] > :last-child:not(ul, ol)::after,
+    shikidown.shikidown-caret .shikidown-block[data-streaming] > :is(ul, ol):last-child > li:last-child::after {
+      content: '▍';
+      margin-inline-start: 0.1em;
+      opacity: 0.6;
+    }
+
+    shikidown.shikidown-fade .shikidown-block {
+      animation: shikidown-fade-in 180ms ease-out;
+    }
+
+    @keyframes shikidown-fade-in {
+      from {
+        opacity: 0;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      shikidown.shikidown-fade .shikidown-block {
+        animation: none;
+      }
     }
   `,
 })
@@ -65,9 +118,29 @@ export class MarkdownComponent {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly config = inject(MARKDOWN_CONFIG, { optional: true }) ?? {};
 
-  get incrementalMode(): boolean { return this.config.incrementalRendering ?? false; }
-
   readonly content = input<string>('');
+
+  /**
+   * Le contenu est en cours de génération. Active le rendu incrémental, la
+   * réparation provisoire de la fin du document et la coloration différée des
+   * blocs de code encore ouverts. Repasser à `false` en fin de flux déclenche le
+   * rendu définitif.
+   */
+  readonly streaming = input(false);
+
+  /**
+   * Rendu par blocs : seuls les blocs modifiés sont recalculés et réécrits.
+   * Par défaut, `incrementalRendering` de la configuration, ou `true` pendant
+   * le streaming.
+   */
+  readonly incremental = input<boolean | undefined>(undefined);
+
+  /**
+   * Repère visuel du streaming : `'caret'` marque la fin du texte en cours,
+   * `'fade'` fait apparaître chaque nouveau bloc en fondu. Désactivé par défaut,
+   * et sans effet quand l'utilisateur a demandé à réduire les animations.
+   */
+  readonly animation = input<StreamingAnimation | undefined>(undefined);
 
   /**
    * Composants Angular supplémentaires à rendre dans ce Markdown.
@@ -84,35 +157,44 @@ export class MarkdownComponent {
    */
   readonly componentModules = input<ComponentModuleSource[]>([]);
 
-  // Stable reference cache: same hash → same SafeHtml object → Angular skips [innerHTML] DOM update
-  private readonly safeHtmlCache = new Map<string, SafeHtml>();
+  protected readonly incrementalMode = computed(
+    () => this.incremental() ?? (this.streaming() || (this.config.incrementalRendering ?? false)),
+  );
+
+  protected readonly animationMode = computed(() => this.animation() ?? this.config.animation ?? 'none');
 
   // Holds the last successfully rendered blocks; preserved while blockResource re-loads
   // so the template never flickers and Web Component state is not destroyed between keystrokes
-  readonly displayedBlocks = signal<Array<{ hash: string; html: SafeHtml }>>([]);
+  readonly displayedBlocks = signal<KeyedBlock[]>([]);
+
+  /** Découpage du rendu précédent : seule la fin d'un document qui s'allonge est reparsée. */
+  private parseState: BlockParseState | undefined;
+  private nextBlockId = 0;
 
   readonly renderResource = resource({
-    params: () => ({ text: this.incrementalMode ? null : this.content() }),
-    loader: async ({ params }) => {
+    params: () => ({ text: this.incrementalMode() ? null : this.content() }),
+    loader: async ({ params, abortSignal }) => {
       if (!params.text) return this.sanitizer.bypassSecurityTrustHtml('');
       const html = await this.mdService.parseAsync(params.text);
+      abortSignal.throwIfAborted();
       return this.sanitizer.bypassSecurityTrustHtml(html);
     },
   });
 
   readonly blockResource = resource({
-    params: () => ({ text: this.incrementalMode ? this.content() : null }),
-    loader: async ({ params }): Promise<Array<{ hash: string; html: SafeHtml }>> => {
-      if (!params.text) return [];
-      const blocks = await this.mdService.parseBlocksAsync(params.text);
-      return blocks.map((b) => {
-        let safe = this.safeHtmlCache.get(b.hash);
-        if (!safe) {
-          safe = this.sanitizer.bypassSecurityTrustHtml(b.html);
-          this.safeHtmlCache.set(b.hash, safe);
-        }
-        return { hash: b.hash, html: safe };
+    params: () => ({ text: this.incrementalMode() ? this.content() : null, streaming: this.streaming() }),
+    loader: async ({ params, abortSignal }): Promise<KeyedBlock[]> => {
+      if (!params.text) {
+        this.parseState = undefined;
+        return [];
+      }
+      const result = await this.mdService.renderBlocksAsync(params.text, {
+        previous: this.parseState,
+        streaming: params.streaming,
+        signal: abortSignal,
       });
+      this.parseState = result.state;
+      return assignBlockIds(this.displayedBlocks(), result.blocks, () => this.nextBlockId++);
     },
   });
 
@@ -120,13 +202,7 @@ export class MarkdownComponent {
     // Propagate completed block renders to displayedBlocks (skips intermediate loading states)
     effect(() => {
       const blocks = this.blockResource.value();
-      if (blocks === undefined) return;
-      // Evict SafeHtml entries for blocks no longer in the document
-      const current = new Set(blocks.map((b) => b.hash));
-      for (const hash of this.safeHtmlCache.keys()) {
-        if (!current.has(hash)) this.safeHtmlCache.delete(hash);
-      }
-      this.displayedBlocks.set(blocks);
+      if (blocks !== undefined) this.displayedBlocks.set(blocks);
     });
 
     // Register local Web Components (idempotent)
