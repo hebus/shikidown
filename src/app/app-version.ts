@@ -12,7 +12,7 @@
  * and pulling it in widens the tsconfig for a single string.
  */
 export const VERSIONS = {
-  lib: '2.5.2',
+  lib: '3.0.0',
   angular: '22',
   shiki: '4',
   /** Both majors are supported — the peer range is `>=14.0.0`. */
