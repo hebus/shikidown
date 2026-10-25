@@ -94,15 +94,24 @@ The trigger is the `dark` class on `<html>` — the same convention used by
 
 ## Security
 
+The directive initialises mermaid with `securityLevel: 'strict'`: HTML in labels is encoded and
+click handlers are disabled. For interactive diagrams you trust, opt into `'loose'`:
+
+```html
+<shikidown mermaid mermaidSecurityLevel="loose" [content]="markdown" />
+```
+
 <Callout type="warn">
-  The directive initialises mermaid with `securityLevel: 'loose'`. That setting allows click
-  handlers and raw HTML inside diagram labels — convenient for interactive diagrams, but it means a
-  Mermaid source is as trusted as the rest of the Markdown. Do not render diagram definitions that
-  came from untrusted users.
+  `'loose'` allows click handlers and raw HTML inside diagram labels. Never use it for diagrams
+  produced by an LLM or a user. See [Content security](/docs/guides/security).
 </Callout>
 
-This is consistent with how the rest of the library treats its input; see
-[Content security](/docs/guides/markdown-component#content-security).
+## Invalid diagrams and streaming
+
+Each diagram is parsed before rendering. An invalid one keeps its source on screen, marked with
+`data-mermaid-error`, without preventing the others from rendering. In
+[streaming mode](/docs/guides/streaming), the `pre.mermaid` placeholder is only emitted once the
+fence is closed: an unfinished diagram is shown as code, never half-rendered.
 
 ## Example
 

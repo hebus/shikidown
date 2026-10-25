@@ -38,11 +38,11 @@ flowchart TD
   E --> F{Hash in LRU cache?}
   F -- yes --> G[Reuse cached HTML]
   F -- no --> H[Shiki highlights,<br/>result cached]
-  G --> I["@for track block.hash"]
+  G --> I["Stable block ids<br/>@for track block.id"]
   H --> I
-  I --> J{Same SafeHtml reference?}
-  J -- yes --> K[Angular skips the innerHTML write<br/>DOM untouched]
-  J -- no --> L[innerHTML updated<br/>DOM replaced]
+  I --> J{Same HTML as displayed?}
+  J -- yes --> K[No DOM write]
+  J -- no --> L[DOM patched in place]
 `} />
 
 Four mechanisms compose here, and each one matters:
@@ -75,23 +75,26 @@ same text, same hash, regardless of where it moved in the document.
 
 ### The LRU cache
 
-Rendered HTML is stored per hash in a `Map` used as a simple LRU — insertion-ordered, oldest entry
-evicted when full. Capacity is `blockCacheSize`, 256 by default, and the cache is shared by every
-`MarkdownComponent` instance because it lives on the singleton service.
+Rendered HTML is stored per hash in an LRU cache — a hit moves the entry to the front, the least
+recently used one is evicted when full. The source is stored alongside, so a hash collision is a
+miss, never another block's HTML. Capacity is `blockCacheSize`, 256 by default, and the cache is
+shared by every `MarkdownComponent` instance because it lives on the singleton service. Highlighted
+code has an LRU cache of its own, of the same capacity.
 
 </Step>
 
 <Step>
 
-### Stable `SafeHtml` references
+### Stable block ids and in-place patching
 
-This is the step that actually saves the DOM. The component keeps a per-hash cache of `SafeHtml`
-objects, so an unchanged block yields the *same object reference* as last time. Angular's
-`[innerHTML]` binding compares by reference, sees no change, and skips the write entirely — the
-existing nodes, and any Custom Element state they hold, are never touched.
+This is the step that actually saves the DOM. Each block receives an id: an unchanged block takes
+the id of a block with the same hash (so a moved paragraph keeps its element), a changed block
+takes the id of the block that held its position (so the paragraph being typed keeps its element).
+The template tracks by that id, and two identical blocks no longer collide.
 
-The template tracks by hash (`@for (block of displayedBlocks(); track block.hash)`), so blocks are
-also reordered rather than rebuilt when you move a paragraph.
+A block whose HTML is unchanged is not written at all. A changed one is **patched**, not rewritten:
+text nodes are updated in place, and Custom Elements keep their instance and state — including in
+the block being edited.
 
 </Step>
 

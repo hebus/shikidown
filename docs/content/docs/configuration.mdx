@@ -39,6 +39,14 @@ provideMarkdown({
 
   // LRU block cache capacity
   blockCacheSize: 512,
+
+  // Raw HTML: 'sanitize' (default), 'escape' or 'trusted'
+  htmlPolicy: 'sanitize',
+  sanitize: { allowedProtocols: ['https', 'mailto'] },
+
+  // Streaming: repair of unfinished syntax, visual cue
+  repair: { math: true },
+  animation: 'caret',
 });
 ```
 
@@ -92,9 +100,29 @@ provideMarkdown({
       default: 'false',
     },
     blockCacheSize: {
-      description: 'Maximum number of rendered blocks kept in the LRU cache shared by all MarkdownComponent instances.',
+      description: 'Maximum number of rendered blocks kept in the LRU cache shared by all MarkdownComponent instances. Also the capacity of the highlight cache.',
       type: 'number',
       default: '256',
+    },
+    htmlPolicy: {
+      description: "Raw HTML in the Markdown: 'sanitize' filters it against an allow-list, 'escape' displays it as text, 'trusted' inserts it untouched. See Content security.",
+      type: "'sanitize' | 'escape' | 'trusted'",
+      default: "'sanitize'",
+    },
+    sanitize: {
+      description: 'Allow-list settings for the sanitize policy: allowedProtocols, allowedTags, allowStyle, customElements.',
+      type: 'SanitizeOptions',
+      default: '{}',
+    },
+    repair: {
+      description: 'Display repair of unfinished syntax while streaming. false turns it off; { math: true } also closes $$ blocks and hides unclosed $…$ formulas.',
+      type: 'boolean | RepairOptions',
+      default: 'true',
+    },
+    animation: {
+      description: "Default visual cue of <shikidown [streaming]>: 'none', 'caret' or 'fade'.",
+      type: 'StreamingAnimation',
+      default: "'none'",
     },
   }}
 />
@@ -180,7 +208,8 @@ consumers of `shikidown` are unaffected.
 
 `markdownOptions` is merged **over** the library defaults, which are `html: true`,
 `linkify: true` and `typographer: true`. `html: true` is what allows component selectors to survive
-parsing, so overriding it to `false` disables component embedding.
+parsing, so overriding it to `false` disables component embedding. Raw HTML is filtered according to
+[`htmlPolicy`](/docs/guides/security).
 
 ```typescript
 import markdownItAnchor from 'markdown-it-anchor';
@@ -204,6 +233,9 @@ provideMarkdown({
   plugins: [markdownItAnchor, { load: () => import('@vscode/markdown-it-katex') }],
 });
 ```
+
+For KaTeX specifically, `katexPlugin()` from `shikidown/math` does this for you and accepts the
+plugin's options — see [Math formulas](/docs/guides/streaming#math-formulas).
 
 Loaders resolve in parallel while the service initialises, then apply in **array order** — the
 position in the list decides precedence, not which download finished first.

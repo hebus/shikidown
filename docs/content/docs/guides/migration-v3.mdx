@@ -1,0 +1,55 @@
+---
+title: Migrating to 3.0
+description: Breaking changes in shikidown 3.0 and how to keep the 2.x behaviour where you need it.
+---
+
+3.0 makes shikidown safe for LLM output by default and adds a streaming mode. Most applications
+only need to check the first two points.
+
+## Raw HTML is filtered
+
+**Before:** raw HTML was inserted as-is (`html: true`, no filtering).
+**Now:** `htmlPolicy: 'sanitize'` filters it against an allow-list — see
+[Content security](/docs/guides/security).
+
+Embedded components keep working. What disappears: event handler attributes, `style`, `<script>`,
+`<iframe>`, `<form>`, `<svg>` and other tags outside the list, and URLs with a protocol other than
+`http`, `https`, `mailto`, `tel`.
+
+To restore 2.x behaviour for content you fully control:
+
+```typescript
+provideMarkdown({ htmlPolicy: 'trusted' });
+```
+
+Or relax only what you need: `sanitize: { allowStyle: true, allowedTags: ['svg', 'path'], allowedProtocols: [...] }`.
+
+## Markdown links follow the same protocol list
+
+`[ftp](ftp://…)` used to render as a link and now renders as text. Add the protocol to
+`sanitize.allowedProtocols`.
+
+## Mermaid is strict
+
+`MermaidDirective` now initialises Mermaid with `securityLevel: 'strict'`. For interactive diagrams
+with click handlers, set `mermaidSecurityLevel="loose"` on the host.
+
+## Smaller changes
+
+- Incremental blocks are tracked by a stable id rather than by hash, and the block being written is
+  patched in place. If you styled the block wrappers, they now carry `class="shikidown-block"`.
+- Tables are wrapped in `<div class="shikidown-table" tabindex="0">` (horizontal scrolling) and
+  header cells carry `scope="col"`.
+- `MarkdownComponent.incrementalMode` is now a protected signal; use the `incremental` input.
+- The block cache is a true LRU and checks the source on hits; `clearCache()` also empties the new
+  highlight cache.
+- A failed initialisation (a chunk that did not load) is retried on the next render instead of
+  failing forever.
+
+## New
+
+- `[streaming]`, `[incremental]` and `[animation]` inputs — see
+  [Streaming LLM output](/docs/guides/streaming).
+- `MarkdownService.renderBlocksAsync()`, `getStats()`, `resetStats()`.
+- `repairIncompleteMarkdown()`, `sanitizeHtml()`, `isSafeUrl()`.
+- The `shikidown/math` entry point.

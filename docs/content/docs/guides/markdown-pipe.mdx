@@ -76,6 +76,5 @@ per-page registration must go through
 
 ## Content security
 
-As with the component, the HTML is passed through `bypassSecurityTrustHtml`. Treat the Markdown
-source as trusted input — see
-[Content security](/docs/guides/markdown-component#content-security).
+As with the component, the HTML is passed through `bypassSecurityTrustHtml`, after shikidown's own
+filtering of raw HTML — see [Content security](/docs/guides/security).

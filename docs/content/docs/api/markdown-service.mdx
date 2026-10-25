@@ -35,7 +35,9 @@ export class ContentService {
 | [`parseAsync`](#parseasync) | `(content: string) => Promise<string>` | Renders the whole document, returns raw HTML. |
 | [`parse`](#parse) | `(content: string) => string` | Synchronous render. Throws before initialisation. |
 | [`parseBlocksAsync`](#parseblocksasync) | `(content: string) => Promise<RenderedBlock[]>` | Renders as independent blocks, with LRU caching. |
-| [`clearCache`](#clearcache) | `() => void` | Empties the block cache. |
+| [`renderBlocksAsync`](#renderblocksasync) | `(content: string, options?: BlockRenderOptions) => Promise<BlockRenderResult>` | Block rendering for streamed documents: re-parses only the end. |
+| [`getStats`](#getstats) / `resetStats` | `() => MarkdownStats` / `() => void` | Work counters — parses, renders, highlights, cache hits. |
+| [`clearCache`](#clearcache) | `() => void` | Empties the block and highlight caches. |
 
 ---
 
@@ -67,10 +69,10 @@ initialisation. Every async method calls it for you; you only need it explicitly
 parseAsync(content: string): Promise<string>
 ```
 
-Renders the whole document and returns raw HTML — a `string`, not `SafeHtml`. Binding it to
-`[innerHTML]` yourself means going through `DomSanitizer`; sanitising will strip embedded Custom
-Elements and Shiki's inline styles, so use `bypassSecurityTrustHtml` and treat the source as
-trusted.
+Renders the whole document and returns raw HTML — a `string`, not `SafeHtml`. Raw HTML in the
+source has already been filtered according to `htmlPolicy` (see
+[Content security](/docs/guides/security)); binding it through `DomSanitizer` would also strip
+embedded Custom Elements and Shiki's inline styles, so use `bypassSecurityTrustHtml`.
 
 ---
 
@@ -118,6 +120,37 @@ how to keep the DOM stable across renders.
 
 ---
 
+### renderBlocksAsync
+
+```typescript
+renderBlocksAsync(content: string, options?: BlockRenderOptions): Promise<BlockRenderResult>
+```
+
+The pipeline behind `<shikidown [streaming]>`. Options:
+
+- `previous` — the `state` returned by the previous call for the same document. When the beginning
+  of the document is unchanged, only its last block is re-parsed.
+- `streaming` — repairs the end of the document for display, and leaves an open code fence
+  unhighlighted until it closes.
+- `signal` — an `AbortSignal`; the call rejects if it is aborted before rendering starts.
+
+The result is identical to a full parse, whatever the chunking — the state only saves work. See
+[Streaming LLM output](/docs/guides/streaming#headless-use).
+
+---
+
+### getStats
+
+```typescript
+getStats(): MarkdownStats
+resetStats(): void
+```
+
+Cumulative counters (`fullParses`, `tailParses`, `blockRenders`, `blockCacheHits`, `highlights`,
+`highlightCacheHits`) — useful in tests to check that a fragment does not redo work.
+
+---
+
 ### clearCache
 
 ```typescript
@@ -143,4 +176,5 @@ Values used when `provideMarkdown()` is absent, or when an option is not set:
 | Theme | `{ dark: 'github-dark', light: 'poimandres' }` |
 | Languages | 16 common languages — see [Configuration](/docs/configuration#languages) |
 | markdown-it options | `{ html: true, linkify: true, typographer: true }` |
-| Block cache capacity | `256` |
+| HTML policy | `'sanitize'` |
+| Block and highlight cache capacity | `256` each |

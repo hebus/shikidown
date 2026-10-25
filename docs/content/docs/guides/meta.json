@@ -3,10 +3,13 @@
   "pages": [
     "markdown-component",
     "markdown-pipe",
+    "streaming",
     "embedding-components",
     "lazy-loading",
     "incremental-rendering",
     "mermaid",
-    "styling-dark-mode"
+    "security",
+    "styling-dark-mode",
+    "migration-v3"
   ]
 }
