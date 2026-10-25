@@ -2,7 +2,7 @@
 
 All notable changes to `shikidown`. Versions follow [Semantic Versioning](https://semver.org).
 
-## [Unreleased] — 3.0.0
+## [3.0.0] — 2026-10-25
 
 Streaming LLM output, and safe defaults for untrusted Markdown.
 Migration guide: [Migrating to 3.0](https://hebus.github.io/shikidown/docs/guides/migration-v3).
