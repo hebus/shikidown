@@ -14,6 +14,7 @@
  * - `data-anim="reveal"` : apparition au défilement ;
  * - `data-anim="stagger"` : apparition décalée des enfants ;
  * - `data-anim="blob"` : halos en parallaxe ;
+ * - `data-anim="bar"` : barres de comparaison, remplies à l'apparition ;
  * - `data-count-from` / `data-count-to` : compteurs.
  */
 export async function animateHome(root: HTMLElement, format: (value: number) => string): Promise<() => void> {
@@ -65,6 +66,17 @@ export async function animateHome(root: HTMLElement, format: (value: number) => 
         stagger: 0.08,
         ease: 'power3.out',
         scrollTrigger: { trigger: group, start: 'top 85%', once: true },
+      });
+    });
+
+    // ─── Barres de comparaison ─────────────────────────────────────────────
+    q('[data-anim="bar"]').forEach((bar) => {
+      gsap.from(bar, {
+        scaleX: 0,
+        transformOrigin: 'left center',
+        duration: 1.4,
+        ease: 'power3.out',
+        scrollTrigger: { trigger: bar, start: 'top 92%', once: true },
       });
     });
 

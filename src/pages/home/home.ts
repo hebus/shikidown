@@ -176,13 +176,7 @@ const INSTALL_COMMAND = 'npm i shikidown';
           <ul data-anim="stagger" class="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4" role="list">
             @for (stat of c().stats; track stat.label) {
               <li class="flex flex-col rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 p-6">
-                <p class="flex items-center gap-2 text-xs font-semibold" aria-hidden="true">
-                  <span class="rounded-md bg-indigo-600 px-1.5 py-0.5 text-white">v3</span>
-                  <span class="text-gray-500 dark:text-gray-400">
-                    {{ lang() === 'fr' ? 'v2 :' : 'v2:' }} <span class="line-through decoration-rose-500/70 decoration-2">{{ stat.v2 }}</span>
-                  </span>
-                </p>
-                <p class="mt-3 text-5xl font-extrabold tracking-tight" aria-hidden="true">
+                <p class="text-5xl font-extrabold tracking-tight" aria-hidden="true">
                   <span [class]="accentClass">{{ stat.prefix ?? '' }}</span><span
                     [class]="accentClass"
                     [attr.data-count-from]="stat.from"
@@ -190,6 +184,25 @@ const INSTALL_COMMAND = 'npm i shikidown';
                   >{{ format(stat.to) }}</span>
                 </p>
                 <p class="mt-3 text-sm leading-relaxed text-gray-600 dark:text-gray-300" aria-hidden="true">{{ stat.label }}</p>
+                <div class="mt-auto space-y-1.5 pt-5 font-mono text-[11px]" aria-hidden="true">
+                  <div class="flex items-center gap-2">
+                    <span class="w-5 text-gray-500 dark:text-gray-400">v2</span>
+                    <span class="h-1.5 flex-1 rounded-full bg-gray-100 dark:bg-white/5">
+                      <span data-anim="bar" class="block h-full rounded-full bg-gray-400 dark:bg-gray-500" [style.width.%]="stat.bars[0]"></span>
+                    </span>
+                    <span class="w-20 text-right tabular-nums text-gray-500 dark:text-gray-400">{{ stat.v2 }}</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="w-5 font-semibold text-indigo-600 dark:text-indigo-300">v3</span>
+                    <span class="h-1.5 flex-1 rounded-full bg-gray-100 dark:bg-white/5">
+                      <span data-anim="bar" class="block h-full min-w-1.5 rounded-full bg-linear-to-r from-indigo-500 to-fuchsia-500" [style.width.%]="stat.bars[1]"></span>
+                    </span>
+                    <span class="w-20 text-right font-semibold tabular-nums text-indigo-600 dark:text-indigo-300">{{ stat.v3 }}</span>
+                  </div>
+                  @if (stat.barsNote) {
+                    <p class="pl-7 font-sans text-gray-500 dark:text-gray-400">{{ stat.barsNote }}</p>
+                  }
+                </div>
                 <span class="sr-only">{{ stat.spoken }}</span>
               </li>
             }

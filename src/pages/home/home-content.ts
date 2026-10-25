@@ -19,8 +19,13 @@ export interface Stat {
   readonly prefix?: string;
   readonly suffix?: string;
   readonly label: string;
-  /** La même mesure avec shikidown 2.5, affichée barrée à côté de la valeur v3. */
+  /** Valeurs affichées au bout des barres de comparaison. */
   readonly v2: string;
+  readonly v3: string;
+  /** Longueur des barres v2 et v3, en % : proportionnelles aux mesures. */
+  readonly bars: readonly [number, number];
+  /** Ce que mesurent les barres, quand ce n'est pas le chiffre lui-même. */
+  readonly barsNote?: string;
   /** Phrase complète lue par les lecteurs d'écran à la place du compteur. */
   readonly spoken: string;
 }
@@ -185,10 +190,10 @@ export const HOME_CONTENT: Record<Lang, HomeContent> = {
     statsTitle: 'Moins de travail, à chaque fragment',
     statsIntro: 'La même réponse streamée mot à mot, rendue par shikidown 2.5 puis par la 3.0 dans la même exécution.',
     stats: [
-      { from: 415, to: 2, v2: '415', label: 'colorations Shiki pour un bloc de code de 80 lignes', spoken: '2 colorations Shiki en v3 contre 415 en v2, pour un bloc de code de 80 lignes' },
-      { from: 1824, to: 10, v2: '1 824', label: 'parsings complets du document sur une longue réponse', spoken: '10 parsings complets en v3 contre 1 824 en v2, sur une longue réponse' },
-      { from: 1, to: 11, prefix: '×', v2: '×1', label: 'plus rapide au minimum sur un gros bloc de code', spoken: 'v3 au moins 11 fois plus rapide que v2 sur un gros bloc de code' },
-      { from: 20, to: 0, v2: 'à chaque fragment', label: 'composant Angular recréé dans le bloc en cours d’écriture', spoken: 'v3 ne recrée aucun composant Angular dans le bloc en cours, v2 le recréait à chaque fragment' },
+      { from: 415, to: 2, v2: '415', v3: '2', bars: [100, 2], label: 'colorations Shiki pour un bloc de code de 80 lignes', spoken: '2 colorations Shiki en v3 contre 415 en v2, pour un bloc de code de 80 lignes' },
+      { from: 1824, to: 10, v2: '1 824', v3: '10', bars: [100, 2], label: 'parsings complets du document sur une longue réponse', spoken: '10 parsings complets en v3 contre 1 824 en v2, sur une longue réponse' },
+      { from: 1, to: 11, prefix: '×', v2: '100 %', v3: '≤ 9 %', bars: [100, 9], barsNote: 'durée de rendu', label: 'plus rapide au minimum sur un gros bloc de code', spoken: 'v3 au moins 11 fois plus rapide que v2 sur un gros bloc de code' },
+      { from: 20, to: 0, v2: '1 / fragment', v3: '0', bars: [100, 0], label: 'composant Angular recréé dans le bloc en cours d’écriture', spoken: 'v3 ne recrée aucun composant Angular dans le bloc en cours, v2 le recréait à chaque fragment' },
     ],
     statsNote: 'Mesuré par streaming-perf.spec.ts, chemin 2.x contre chemin 3.0 dans la même exécution. Les temps varient selon la machine (×11 à ×17 observés) ; les nombres de colorations et de parsings sont déterministes.',
     compare: {
@@ -266,10 +271,10 @@ export const HOME_CONTENT: Record<Lang, HomeContent> = {
     statsTitle: 'Less work, on every fragment',
     statsIntro: 'The same answer streamed word by word, rendered by shikidown 2.5 then by 3.0 in the same run.',
     stats: [
-      { from: 415, to: 2, v2: '415', label: 'Shiki highlights for an 80-line code block', spoken: '2 Shiki highlights in v3 against 415 in v2, for an 80-line code block' },
-      { from: 1824, to: 10, v2: '1,824', label: 'full document parses on a long answer', spoken: '10 full parses in v3 against 1,824 in v2, on a long answer' },
-      { from: 1, to: 11, prefix: '×', v2: '×1', label: 'faster, at the very least, on a large code block', spoken: 'v3 at least 11 times faster than v2 on a large code block' },
-      { from: 20, to: 0, v2: 'every fragment', label: 'Angular components recreated in the block being written', spoken: 'v3 recreates no Angular component in the block being written, v2 recreated it on every fragment' },
+      { from: 415, to: 2, v2: '415', v3: '2', bars: [100, 2], label: 'Shiki highlights for an 80-line code block', spoken: '2 Shiki highlights in v3 against 415 in v2, for an 80-line code block' },
+      { from: 1824, to: 10, v2: '1,824', v3: '10', bars: [100, 2], label: 'full document parses on a long answer', spoken: '10 full parses in v3 against 1,824 in v2, on a long answer' },
+      { from: 1, to: 11, prefix: '×', v2: '100%', v3: '≤ 9%', bars: [100, 9], barsNote: 'render time', label: 'faster, at the very least, on a large code block', spoken: 'v3 at least 11 times faster than v2 on a large code block' },
+      { from: 20, to: 0, v2: '1 / fragment', v3: '0', bars: [100, 0], label: 'Angular components recreated in the block being written', spoken: 'v3 recreates no Angular component in the block being written, v2 recreated it on every fragment' },
     ],
     statsNote: 'Measured by streaming-perf.spec.ts, 2.x path against 3.0 path in the same run. Timings depend on the machine (×11 to ×17 observed); highlight and parse counts are deterministic.',
     compare: {
