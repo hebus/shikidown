@@ -1,432 +1,337 @@
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import {
+  afterNextRender,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  ElementRef,
+  inject,
+  signal,
+} from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MarkdownComponent } from 'shikidown';
 import { MermaidDirective } from 'shikidown/mermaid';
 import { LanguageService } from '../../services/language.service';
-import { VERSIONS } from '../../app/app-version';
 import { siteLinks } from '../../app/site-links';
-import { simulateStream } from '../../app/stream-simulator';
-import { STREAM_SAMPLE } from './stream-sample';
+import { animateHome } from './home-animations';
+import { HOME_CONTENT, STACK } from './home-content';
+import { LiveWindowComponent } from './live-window';
+import { StreamCompareComponent } from './stream-compare';
+import { COMPARE_SAMPLE, STREAM_SAMPLE } from './stream-sample';
 
-const HERO_MD: Record<'fr' | 'en', string> = {
-  fr: `
-# Markdown enrichi de composants Angular
-
-**shikidown** transforme vos fichiers Markdown en expériences interactives.
-Associez la puissance de \`markdown-it\`, la beauté de \`shiki\` et la réactivité d'Angular ${VERSIONS.angular}.
-
-\`\`\`typescript
-// app.config.ts
-export const appConfig: ApplicationConfig = {
-  providers: [
-    provideMarkdown({
-      theme: { dark: 'github-dark', light: 'github-light' },
-      components: { 'mon-composant': MonComposantComponent },
-    }),
-  ],
-};
-\`\`\`
-
-Puis dans votre template :
-
-\`\`\`html
-<shikidown [content]="markdownContent" />
-\`\`\`
-
-Ou depuis une string directement dans le Markdown :
-
-\`\`\`markdown
-<mon-composant titre="Bonjour !" couleur="blue"></mon-composant>
-\`\`\`
-`,
-  en: `
-# Markdown enriched with Angular components
-
-**shikidown** turns your Markdown files into interactive experiences.
-Combine the power of \`markdown-it\`, the beauty of \`shiki\`, and the reactivity of Angular ${VERSIONS.angular}.
-
-\`\`\`typescript
-// app.config.ts
-export const appConfig: ApplicationConfig = {
-  providers: [
-    provideMarkdown({
-      theme: { dark: 'github-dark', light: 'github-light' },
-      components: { 'my-component': MyComponent },
-    }),
-  ],
-};
-\`\`\`
-
-Then in your template:
-
-\`\`\`html
-<shikidown [content]="markdownContent" />
-\`\`\`
-
-Or directly in Markdown:
-
-\`\`\`markdown
-<my-component title="Hello!" color="blue"></my-component>
-\`\`\`
-`,
-};
-
-const MERMAID_MD: Record<'fr' | 'en', string> = {
-  fr: `
-## Diagrammes Mermaid
-
-Écrivez un bloc **mermaid** dans votre Markdown :
-\`\`\`\`markdown
-\`\`\`mermaid
-graph TD
-  A[provideMarkdown] --> B{Plugin mermaid}
-  B -->|oui| C[SVG rendu]
-  B -->|non| D[bloc code brut]
-  C --> E[✨ Interactif]
-\`\`\`
-\`\`\`\`
-
-Et shikidown le rend directement en SVG :
-
-\`\`\`mermaid
-graph TD
-  A[provideMarkdown] --> B{Plugin mermaid}
-  B -->|oui| C[SVG rendu]
-  B -->|non| D[bloc code brut]
-  C --> E[✨ Interactif]
-\`\`\`
-`,
-  en: `
-## Mermaid Diagrams
-
-Write a \`\`\`mermaid\`\`\` block in your Markdown:
-
-\`\`\`\`markdown
-\`\`\`mermaid
-graph TD
-  A[provideMarkdown] --> B{Mermaid plugin}
-  B -->|yes| C[SVG rendered]
-  B -->|no| D[raw code block]
-  C --> E[✨ Interactive]
-\`\`\`
-\`\`\`\`
-
-And shikidown renders it directly as SVG:
-
-\`\`\`mermaid
-graph TD
-  A[provideMarkdown] --> B{Mermaid plugin}
-  B -->|yes| C[SVG rendered]
-  B -->|no| D[raw code block]
-  C --> E[✨ Interactive]
-\`\`\`
-`,
-};
-
-// Every LaTeX command needs a doubled backslash to survive the template literal:
-// `\i` and `\s` are not escape sequences, so JS drops the backslash and KaTeX would
-// receive `int` and `sqrt` as plain variables. A LaTeX row break is itself `\\`, so
-// inside pmatrix and aligned it takes four.
-const KATEX_MD: Record<'fr' | 'en', string> = {
-  fr: `
-## Formules mathématiques
-
-\`katexPlugin()\`, de l'entry point \`shikidown/math\`, charge KaTeX à la demande. Les formules s'écrivent en ligne avec
-\\$...\\$ — comme $E = mc^2$ — ou en bloc avec \\$\\$...\\$\\$.
-
-Une série convergente :
-
-$$
-\\sum_{n=1}^{\\infty} \\frac{1}{n^2} = \\frac{\\pi^2}{6}
-$$
-
-Une matrice et son déterminant :
-
-$$
-A = \\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}
-\\qquad
-\\det A = ad - bc
-$$
-
-Un système aligné :
-
-$$
-\\begin{aligned}
-\\nabla \\cdot \\mathbf{E} &= \\frac{\\rho}{\\varepsilon_0} \\\\
-\\nabla \\times \\mathbf{B} &= \\mu_0 \\mathbf{J} + \\mu_0 \\varepsilon_0 \\frac{\\partial \\mathbf{E}}{\\partial t}
-\\end{aligned}
-$$
-`,
-  en: `
-## Mathematical formulas
-
-\`katexPlugin()\`, from the \`shikidown/math\` entry point, loads KaTeX on demand. Formulas go inline with
-\\$...\\$ — like $E = mc^2$ — or as a block with \\$\\$...\\$\\$.
-
-A convergent series:
-
-$$
-\\sum_{n=1}^{\\infty} \\frac{1}{n^2} = \\frac{\\pi^2}{6}
-$$
-
-A matrix and its determinant:
-
-$$
-A = \\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}
-\\qquad
-\\det A = ad - bc
-$$
-
-An aligned system:
-
-$$
-\\begin{aligned}
-\\nabla \\cdot \\mathbf{E} &= \\frac{\\rho}{\\varepsilon_0} \\\\
-\\nabla \\times \\mathbf{B} &= \\mu_0 \\mathbf{J} + \\mu_0 \\varepsilon_0 \\frac{\\partial \\mathbf{E}}{\\partial t}
-\\end{aligned}
-$$
-`,
-};
-
-const FEATURES_MD: Record<'fr' | 'en', string> = {
-  fr: `
-## Fonctionnalités
-
-| Feature | Détail |
-|---------|--------|
-| \`markdown-it\` | Parsing complet CommonMark + extensions |
-| \`shiki\` v4 | Syntax highlighting multi-thème dark/light |
-| Angular Components | Embedding via Custom Elements (\`@angular/elements\`) |
-| Streaming LLM | Fin du document réparée, seul le dernier bloc recalculé, état des composants conservé |
-| Sécurité | HTML brut filtré par liste blanche, protocoles d'URL contrôlés |
-| Plugins | Système natif de plugins \`markdown-it\` ; KaTeX via \`shikidown/math\`, Mermaid via \`shikidown/mermaid\` |
-| Signals | API 100% réactive avec \`resource()\` |
-| TailwindCSS v4 | Styling moderne et dark mode |
-| Pipe async | \`content \| markdown \| async\` |
-
-\`\`\`typescript
-// Composant embeddable minimal
-@Component({
-  selector: 'mon-composant',
-  template: \`<div>{{ titre() }}</div>\`,
-})
-export class MonComposantComponent {
-  readonly titre = input<string>('');
-}
-\`\`\`
-`,
-  en: `
-## Features
-
-| Feature | Detail |
-|---------|--------|
-| \`markdown-it\` | Full CommonMark parsing + extensions |
-| \`shiki\` v4 | Multi-theme dark/light syntax highlighting |
-| Angular Components | Embedding via Custom Elements (\`@angular/elements\`) |
-| LLM streaming | Repaired document end, only the last block recomputed, component state kept |
-| Security | Raw HTML filtered against an allow-list, URL protocols checked |
-| Plugins | Native \`markdown-it\` plugin system; KaTeX via \`shikidown/math\`, Mermaid via \`shikidown/mermaid\` |
-| Signals | 100% reactive API with \`resource()\` |
-| TailwindCSS v4 | Modern styling and dark mode |
-| Async pipe | \`content \| markdown \| async\` |
-
-\`\`\`typescript
-// Minimal embeddable component
-@Component({
-  selector: 'my-component',
-  template: \`<div>{{ title() }}</div>\`,
-})
-export class MyComponent {
-  readonly title = input<string>('');
-}
-\`\`\`
-`,
-};
-
-const FEATURES_CARDS: Record<'fr' | 'en', Array<{ icon: string; title: string; desc: string }>> = {
-  fr: [
-    { icon: '🎨', title: 'Shiki v4 Highlighting', desc: 'Coloration syntaxique de qualité IDE avec support dark/light automatique via CSS variables.' },
-    { icon: '⚡', title: 'Composants Angular', desc: 'Insérez vos composants par sélecteur CSS dans le Markdown. Ils sont instanciés dynamiquement.' },
-    { icon: '🔄', title: 'Rendu incrémental', desc: 'Seuls les blocs modifiés sont re-parsés. Les Web Components conservent leur état entre les frappes.' },
-    { icon: '🔌', title: 'Plugins markdown-it', desc: 'Étendez le rendu avec n\'importe quel plugin : KaTeX pour LaTeX, Mermaid, footnotes, ancres…' },
-    { icon: '💬', title: 'Streaming LLM', desc: 'Affichez une réponse pendant sa génération : syntaxe inachevée réparée, code coloré une fois fermé, rien ne clignote.' },
-    { icon: '🛡️', title: 'Sûr par défaut', desc: 'Le HTML brut est filtré et les URL contrôlées : le texte d\'un LLM ne peut pas injecter de script.' },
-  ],
-  en: [
-    { icon: '🎨', title: 'Shiki v4 Highlighting', desc: 'IDE-quality syntax highlighting with automatic dark/light support via CSS variables.' },
-    { icon: '⚡', title: 'Angular Components', desc: 'Insert your components by CSS selector in Markdown. They are instantiated dynamically.' },
-    { icon: '🔄', title: 'Incremental rendering', desc: 'Only changed blocks are re-parsed. Web Components preserve their state between keystrokes.' },
-    { icon: '🔌', title: 'markdown-it Plugins', desc: 'Extend rendering with any plugin: KaTeX for LaTeX, Mermaid, footnotes, heading anchors…' },
-    { icon: '💬', title: 'LLM streaming', desc: 'Display an answer while it is generated: unfinished syntax repaired, code highlighted once closed, no flicker.' },
-    { icon: '🛡️', title: 'Safe by default', desc: 'Raw HTML is filtered and URLs checked: an LLM\'s output cannot inject a script.' },
-  ],
-};
-
-const UI: Record<
-  'fr' | 'en',
-  { start: string; quickstart: string; docs: string; stream: string; streamIntro: string; play: string; stop: string }
-> = {
-  fr: {
-    start: 'Démarrer →',
-    quickstart: 'Démarrage rapide',
-    docs: 'Documentation',
-    stream: 'Streaming LLM',
-    streamIntro:
-      'La réponse ci-dessous est rejouée par fragments coupés n\'importe où, comme un LLM l\'émettrait. Cliquez sur le compteur pendant le flux : il garde sa valeur.',
-    play: 'Rejouer en flux',
-    stop: 'Arrêter',
-  },
-  en: {
-    start: 'Get started →',
-    quickstart: 'Quick start',
-    docs: 'Documentation',
-    stream: 'LLM streaming',
-    streamIntro:
-      'The answer below is replayed in fragments cut anywhere, as an LLM would emit it. Click the counter during the stream: it keeps its value.',
-    play: 'Replay as a stream',
-    stop: 'Stop',
-  },
-};
+const INSTALL_COMMAND = 'npm i shikidown';
 
 @Component({
   selector: 'app-home',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, MarkdownComponent, MermaidDirective],
+  imports: [RouterLink, MarkdownComponent, MermaidDirective, LiveWindowComponent, StreamCompareComponent],
+  host: { class: 'block', '[class.motion-pending]': 'motionPending()' },
+  styles: `
+    /* Masqué jusqu'à ce que GSAP ait posé l'état de départ de l'entrée du hero :
+       sans cela, le hero s'afficherait une fraction de seconde avant de s'animer. */
+    :host(.motion-pending) [data-anim='pill'],
+    :host(.motion-pending) [data-anim='word'],
+    :host(.motion-pending) [data-anim='hero-fade'],
+    :host(.motion-pending) [data-anim='window'] {
+      visibility: hidden;
+    }
+
+    .hero-grid {
+      background-image:
+        linear-gradient(to right, rgb(99 102 241 / 0.08) 1px, transparent 1px),
+        linear-gradient(to bottom, rgb(99 102 241 / 0.08) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, black, transparent);
+    }
+
+    /* Halo qui suit le pointeur sur les cartes de fonctionnalités. */
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: radial-gradient(420px circle at var(--x, 50%) var(--y, 50%), rgb(99 102 241 / 0.14), transparent 45%);
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+    .feature-card:hover::before {
+      opacity: 1;
+    }
+  `,
   template: `
-    <main class="mx-auto max-w-4xl px-4 py-12 space-y-16">
-
-      <!-- Hero -->
-      <section class="text-center space-y-6">
-        <div class="inline-flex items-center gap-2 rounded-full border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/20 px-4 py-1.5 text-sm text-indigo-600 dark:text-indigo-400 font-medium">
-          ✨ Angular {{ versions.angular }} · markdown-it {{ versions.markdownIt }} · shiki v{{ versions.shiki }} · TailwindCSS v{{ versions.tailwind }}
+    <main>
+      <!-- ─── Hero ───────────────────────────────────────────────────────── -->
+      <section class="relative isolate overflow-hidden">
+        <div class="pointer-events-none absolute inset-0 -z-10" aria-hidden="true">
+          <div class="hero-grid absolute inset-0"></div>
+          <div data-anim="blob" class="absolute -top-40 left-[8%] h-[28rem] w-[28rem] rounded-full bg-indigo-400/30 dark:bg-indigo-600/30 blur-3xl"></div>
+          <div data-anim="blob" class="absolute top-10 right-[5%] h-[24rem] w-[24rem] rounded-full bg-fuchsia-400/25 dark:bg-fuchsia-600/25 blur-3xl"></div>
+          <div data-anim="blob" class="absolute top-72 left-[38%] h-[20rem] w-[20rem] rounded-full bg-cyan-300/25 dark:bg-cyan-500/20 blur-3xl"></div>
         </div>
-        <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-gray-900 dark:text-white leading-tight">
-          Markdown + Angular<br>
-          <span class="text-indigo-600 dark:text-indigo-400">{{ lang() === 'fr' ? 'dans le même rendu' : 'in a single render' }}</span>
-        </h1>
-        <p class="max-w-2xl mx-auto text-lg text-gray-600 dark:text-gray-400 leading-relaxed">
-          @let text = lang() === 'fr' ? "Une librairie Angular pour rendre du Markdown avec coloration syntaxique Shiki et y insérer n'importe quel composant Angular interactif." : "An Angular library to render Markdown with Shiki syntax highlighting and embed any interactive Angular component.";
-          {{ text }}
-        </p>
-        <div class="flex flex-wrap justify-center gap-3">
-          <a
-            routerLink="/guide"
-            class="rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 text-sm font-semibold transition-colors shadow-sm"
-          >{{ ui().start }}</a>
-          <a
-            routerLink="/playground"
-            class="rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 px-5 py-2.5 text-sm font-semibold transition-colors"
-          >Playground</a>
-          <a
-            [href]="links.docs"
-            class="rounded-lg px-5 py-2.5 text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
-          >{{ ui().docs }} <span aria-hidden="true">↗</span></a>
-        </div>
-      </section>
 
-      <!-- Feature cards -->
-      <section class="grid grid-cols-2 gap-4">
-        @for (feature of features(); track feature.title) {
-          <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 space-y-2">
-            <div class="text-2xl">{{ feature.icon }}</div>
-            <h3 class="font-semibold text-gray-900 dark:text-white">{{ feature.title }}</h3>
-            <p class="text-sm text-gray-500 dark:text-gray-400">{{ feature.desc }}</p>
+        <div class="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-4 pt-14 pb-20 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:pt-20 lg:pb-28">
+          <div>
+            <a
+              data-anim="pill"
+              routerLink="/guide"
+              fragment="streaming"
+              class="inline-flex items-center gap-2 rounded-full border border-indigo-200 dark:border-indigo-500/30 bg-white/70 dark:bg-indigo-500/10 px-3.5 py-1.5 text-xs font-semibold text-indigo-700 dark:text-indigo-300 backdrop-blur hover:border-indigo-400 transition-colors"
+            >
+              <span class="rounded-full bg-indigo-600 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-white">v3</span>
+              {{ c().pill }}
+              <span aria-hidden="true">→</span>
+            </a>
+
+            <h1 class="mt-6 text-4xl font-extrabold leading-[1.08] tracking-tight text-gray-900 dark:text-white sm:text-5xl lg:text-6xl">
+              @for (line of c().title; track $index) {
+                <span class="block">
+                  @for (word of line; track $index) {
+                    <span class="inline-block overflow-hidden pb-[0.12em] align-bottom">
+                      <span data-anim="word" class="inline-block" [class]="word.accent ? accentClass : ''">{{ word.text }}</span>
+                    </span>{{ ' ' }}
+                  }
+                </span>
+              }
+            </h1>
+
+            <p data-anim="hero-fade" class="mt-6 max-w-xl text-lg leading-relaxed text-gray-600 dark:text-gray-300">
+              {{ c().subtitle }}
+            </p>
+
+            <div data-anim="hero-fade" class="mt-8 flex flex-wrap items-center gap-3">
+              <a
+                routerLink="/guide"
+                class="rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-600/30 transition hover:-translate-y-0.5 hover:bg-indigo-700 motion-reduce:transform-none"
+              >{{ c().start }} <span aria-hidden="true">→</span></a>
+              <a
+                routerLink="/playground"
+                class="rounded-xl border border-gray-300 dark:border-white/15 bg-white/70 dark:bg-white/5 px-5 py-3 text-sm font-semibold text-gray-800 dark:text-gray-100 backdrop-blur transition hover:-translate-y-0.5 hover:border-gray-400 dark:hover:border-white/30 motion-reduce:transform-none"
+              >{{ c().playground }}</a>
+            </div>
+
+            <div data-anim="hero-fade" class="mt-6">
+              <button
+                type="button"
+                (click)="copyInstall()"
+                class="group inline-flex items-center gap-3 rounded-lg border border-gray-200 dark:border-white/10 bg-gray-900 px-4 py-2.5 font-mono text-sm text-gray-100 transition hover:border-indigo-400"
+                [attr.aria-label]="c().copy + ' : ' + installCommand"
+              >
+                <span class="text-indigo-400" aria-hidden="true">$</span>
+                <span>{{ installCommand }}</span>
+                <span class="text-gray-400 group-hover:text-white" aria-hidden="true">{{ copied() ? '✓' : '⧉' }}</span>
+              </button>
+              <span class="sr-only" aria-live="polite">{{ copied() ? c().copied : '' }}</span>
+            </div>
           </div>
-        }
-      </section>
 
-      <!-- Markdown rendered demo -->
-      <section class="space-y-4">
-        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">{{ ui().quickstart }}</h2>
-        <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 overflow-hidden">
-          <shikidown [content]="heroMd()" class="prose prose-slate dark:prose-invert max-w-none" />
+          <app-live-window data-anim="window" [source]="streamSample()" [labels]="c().window" />
         </div>
       </section>
 
-      <!-- Streaming demo — lancée par un bouton plutôt qu'automatiquement : un contenu qui
-           bouge plus de cinq secondes doit pouvoir être déclenché et arrêté (WCAG 2.2.2) -->
-      <section class="space-y-4">
-        <div class="flex items-center justify-between gap-4 flex-wrap">
-          <h2 class="text-2xl font-bold text-gray-900 dark:text-white">{{ ui().stream }}</h2>
-          <button
-            type="button"
-            (click)="toggleStream()"
-            class="rounded-lg border border-indigo-300 dark:border-indigo-700 px-4 py-2 text-sm font-semibold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
-          >{{ streaming() ? ui().stop : ui().play }}</button>
-        </div>
-        <p class="text-sm text-gray-600 dark:text-gray-400">{{ ui().streamIntro }}</p>
-        <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 overflow-hidden">
-          <shikidown
-            [content]="streamMd()"
-            [streaming]="streaming()"
-            animation="caret"
-            class="prose prose-slate dark:prose-invert max-w-none"
-          />
+      <!-- ─── Briques ────────────────────────────────────────────────────── -->
+      <section class="border-y border-gray-200/70 dark:border-white/5 bg-white/50 dark:bg-white/[0.02]">
+        <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-8 gap-y-3 px-4 py-6">
+          <span class="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">{{ c().builtOn }}</span>
+          <ul data-anim="stagger" class="flex flex-wrap items-center justify-center gap-x-8 gap-y-3" role="list">
+            @for (name of stack; track name) {
+              <li class="text-base font-semibold text-gray-600 dark:text-gray-300">{{ name }}</li>
+            }
+          </ul>
         </div>
       </section>
 
-      <!-- Mermaid demo -->
-      <section class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 overflow-hidden">
-        <shikidown mermaid [content]="mermaidMd()" class="prose prose-slate dark:prose-invert max-w-none"/>
-      </section>
+      <div class="mx-auto max-w-6xl space-y-28 px-4 py-24">
+        <!-- ─── Chiffres ───────────────────────────────────────────────── -->
+        <section>
+          <h2 data-anim="reveal" class="text-center text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl">
+            {{ c().statsTitle }}
+          </h2>
+          <ul data-anim="stagger" class="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4" role="list">
+            @for (stat of c().stats; track stat.label) {
+              <li class="rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 p-6">
+                <p class="text-5xl font-extrabold tracking-tight" aria-hidden="true">
+                  <span [class]="accentClass">{{ stat.prefix ?? '' }}</span><span
+                    [class]="accentClass"
+                    [attr.data-count-from]="stat.from"
+                    [attr.data-count-to]="stat.to"
+                  >{{ format(stat.to) }}</span>
+                </p>
+                <p class="mt-3 text-sm leading-relaxed text-gray-600 dark:text-gray-300" aria-hidden="true">{{ stat.label }}</p>
+                <span class="sr-only">{{ stat.spoken }}</span>
+              </li>
+            }
+          </ul>
+          <p class="mt-6 text-center text-xs text-gray-500 dark:text-gray-400">{{ c().statsNote }}</p>
+        </section>
 
-      <!-- KaTeX demo — overflow-x-auto so a wide aligned system scrolls rather than
-           stretching the page on a narrow screen -->
-      <section class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 overflow-x-auto">
-        <shikidown [content]="katexMd()" class="prose prose-slate dark:prose-invert max-w-none" />
-      </section>
+        <!-- ─── Avant / après ──────────────────────────────────────────── -->
+        <section>
+          <div data-anim="reveal" class="mx-auto max-w-2xl text-center">
+            <h2 class="text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl">{{ c().compare.title }}</h2>
+            <p class="mt-4 text-gray-600 dark:text-gray-300">{{ c().compare.intro }}</p>
+          </div>
+          <app-stream-compare data-anim="reveal" class="mt-12" [source]="compareSample()" [labels]="compareLabels()" />
+        </section>
 
-      <!-- Features table -->
-      <section class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 overflow-hidden">
-        <shikidown [content]="featuresMd()" class="prose prose-slate dark:prose-invert max-w-none" />
-      </section>
+        <!-- ─── Fonctionnalités ────────────────────────────────────────── -->
+        <section>
+          <div data-anim="reveal" class="mx-auto max-w-2xl text-center">
+            <h2 class="text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl">{{ c().featuresTitle }}</h2>
+            <p class="mt-4 text-gray-600 dark:text-gray-300">{{ c().featuresIntro }}</p>
+          </div>
+          <ul data-anim="stagger" class="mt-12 grid gap-5 md:grid-cols-3" role="list">
+            @for (feature of c().features; track feature.icon) {
+              <li
+                class="feature-card relative overflow-hidden rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 p-7 transition-[translate,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-indigo-500/10 motion-reduce:transform-none"
+                [class.md:col-span-2]="feature.wide"
+                (pointermove)="trackPointer($event)"
+              >
+                <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-linear-to-br from-indigo-500 to-fuchsia-500 text-white shadow-lg shadow-indigo-500/30" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    @switch (feature.icon) {
+                      @case ('stream') { <svg:path d="M4 6h16M4 12h10M4 18h6" /><svg:path d="M18 15v6" /> }
+                      @case ('component') { <svg:rect x="3" y="3" width="7" height="7" rx="1.5" /><svg:rect x="14" y="3" width="7" height="7" rx="1.5" /><svg:rect x="3" y="14" width="7" height="7" rx="1.5" /><svg:rect x="14" y="14" width="7" height="7" rx="1.5" /> }
+                      @case ('code') { <svg:path d="m8 7-5 5 5 5M16 7l5 5-5 5M14 4l-4 16" /> }
+                      @case ('shield') { <svg:path d="M12 3 4 6v6c0 4.5 3.4 8.2 8 9 4.6-.8 8-4.5 8-9V6l-8-3Z" /><svg:path d="m9 12 2 2 4-4" /> }
+                      @case ('diagram') { <svg:rect x="3" y="3" width="6" height="6" rx="1" /><svg:rect x="15" y="15" width="6" height="6" rx="1" /><svg:path d="M9 6h4a2 2 0 0 1 2 2v7" /> }
+                      @case ('feather') { <svg:path d="M20 4c-6 0-12 5-12 12v4M8 16h7M10 11h6" /> }
+                    }
+                  </svg>
+                </span>
+                <h3 class="mt-5 text-lg font-semibold text-gray-900 dark:text-white">{{ feature.title }}</h3>
+                <p class="mt-2 leading-relaxed text-gray-600 dark:text-gray-300">{{ feature.desc }}</p>
+              </li>
+            }
+          </ul>
+        </section>
 
+        <!-- ─── Vitrine Mermaid / KaTeX ────────────────────────────────── -->
+        <section>
+          <div data-anim="reveal" class="mx-auto max-w-2xl text-center">
+            <h2 class="text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl">{{ c().showcaseTitle }}</h2>
+            <p class="mt-4 text-gray-600 dark:text-gray-300">{{ c().showcaseIntro }}</p>
+          </div>
+          <div data-anim="stagger" class="mt-12 grid gap-5 lg:grid-cols-2">
+            <div class="flex min-h-56 items-center justify-center overflow-x-auto rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 p-6">
+              <shikidown mermaid [content]="c().mermaid" class="prose prose-slate dark:prose-invert w-full max-w-none" />
+            </div>
+            <div class="flex min-h-56 items-center justify-center overflow-x-auto rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 p-6">
+              <shikidown [content]="c().katex" class="prose prose-lg prose-slate dark:prose-invert max-w-none" />
+            </div>
+          </div>
+        </section>
+
+        <!-- ─── Démarrage ──────────────────────────────────────────────── -->
+        <section>
+          <h2 data-anim="reveal" class="text-center text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl">
+            {{ c().stepsTitle }}
+          </h2>
+          <ol data-anim="stagger" class="mt-12 grid gap-5 lg:grid-cols-3" role="list">
+            @for (step of c().steps; track step.title; let i = $index) {
+              <li class="flex min-w-0 flex-col rounded-2xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 p-6">
+                <span class="flex items-center gap-3">
+                  <span class="flex h-8 w-8 items-center justify-center rounded-full bg-linear-to-br from-indigo-500 to-fuchsia-500 text-sm font-bold text-white" aria-hidden="true">{{ i + 1 }}</span>
+                  <span class="font-semibold text-gray-900 dark:text-white">{{ step.title }}</span>
+                </span>
+                <p class="mt-3 text-sm leading-relaxed text-gray-600 dark:text-gray-300">{{ step.desc }}</p>
+                <shikidown [content]="step.markdown" class="prose prose-sm prose-slate dark:prose-invert mt-4 max-w-none" />
+              </li>
+            }
+          </ol>
+        </section>
+
+        <!-- ─── Appel final ────────────────────────────────────────────── -->
+        <section
+          data-anim="reveal"
+          class="relative isolate overflow-hidden rounded-3xl bg-linear-to-br from-indigo-700 via-violet-700 to-fuchsia-700 px-6 py-16 text-center shadow-2xl shadow-indigo-500/30 sm:px-16"
+        >
+          <div class="pointer-events-none absolute -top-24 -right-24 -z-10 h-72 w-72 rounded-full bg-white/10 blur-3xl" aria-hidden="true"></div>
+          <h2 class="text-3xl font-bold tracking-tight text-white sm:text-4xl">{{ c().ctaTitle }}</h2>
+          <p class="mx-auto mt-4 max-w-xl text-indigo-100">{{ c().ctaText }}</p>
+          <div class="mt-8 flex flex-wrap justify-center gap-3">
+            <a routerLink="/guide" class="rounded-xl bg-white px-5 py-3 text-sm font-semibold text-indigo-700 shadow transition hover:bg-indigo-50">{{ c().start }}</a>
+            <a [href]="links.docs" class="rounded-xl border border-white/40 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10">
+              {{ c().docs }} <span aria-hidden="true">↗</span>
+            </a>
+          </div>
+        </section>
+      </div>
     </main>
   `,
 })
 export class HomeComponent {
   private readonly langService = inject(LanguageService);
+  private readonly doc = inject(DOCUMENT);
 
   /** Absolute link to the documentation site the demo is published alongside. */
   readonly links = siteLinks();
+  readonly stack = STACK;
+  readonly installCommand = INSTALL_COMMAND;
 
-  readonly versions = VERSIONS;
+  /**
+   * Dégradé des mots mis en avant. Les teintes claires du mode sombre seraient
+   * illisibles sur fond blanc : chaque mode a les siennes (contraste AA texte large).
+   */
+  readonly accentClass =
+    'bg-linear-to-r from-indigo-600 via-violet-600 to-fuchsia-600 dark:from-indigo-400 dark:via-violet-300 dark:to-cyan-300 bg-clip-text text-transparent';
 
   readonly lang = this.langService.lang;
-  readonly heroMd    = computed(() => HERO_MD[this.lang()]);
-  readonly mermaidMd  = computed(() => MERMAID_MD[this.lang()]);
-  readonly katexMd    = computed(() => KATEX_MD[this.lang()]);
-  readonly featuresMd = computed(() => FEATURES_MD[this.lang()]);
-  readonly features  = computed(() => FEATURES_CARDS[this.lang()]);
-  readonly ui        = computed(() => UI[this.lang()]);
+  readonly c = computed(() => HOME_CONTENT[this.lang()]);
+  readonly streamSample = computed(() => STREAM_SAMPLE[this.lang()]);
+  readonly compareSample = computed(() => COMPARE_SAMPLE[this.lang()]);
+  readonly compareLabels = computed(() => ({
+    ...this.c().compare,
+    pause: this.c().window.pause,
+    resume: this.c().window.resume,
+  }));
 
-  readonly streaming = signal(false);
-  /** Texte rejoué ; `null` hors flux, la réponse complète est alors affichée. */
-  private readonly streamed = signal<string | null>(null);
-  readonly streamMd = computed(() => this.streamed() ?? STREAM_SAMPLE[this.lang()]);
+  readonly copied = signal(false);
+  protected readonly motionPending = signal(
+    this.doc.defaultView?.matchMedia('(prefers-reduced-motion: no-preference)').matches ?? false,
+  );
 
-  private stopStream: () => void = () => {};
+  private readonly numberFormat = computed(() => new Intl.NumberFormat(this.lang()));
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => this.stopStream());
+    const host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+    const destroyRef = inject(DestroyRef);
+    let revert: () => void = () => {};
+    let destroyed = false;
+    destroyRef.onDestroy(() => {
+      destroyed = true;
+      revert();
+    });
+
+    afterNextRender(() => {
+      animateHome(host, (value) => this.format(value))
+        .then((cleanup) => (destroyed ? cleanup() : (revert = cleanup)))
+        // GSAP indisponible : la page reste entièrement lisible, simplement sans animation.
+        .catch(() => undefined)
+        .finally(() => this.motionPending.set(false));
+    });
   }
 
-  /** Rejoue la réponse d'exemple comme un flux LLM, ou interrompt le flux en cours. */
-  toggleStream(): void {
-    this.stopStream();
-    if (this.streaming()) {
-      this.streaming.set(false);
-      this.streamed.set(null);
-      return;
+  format(value: number): string {
+    return this.numberFormat().format(value);
+  }
+
+  async copyInstall(): Promise<void> {
+    try {
+      await this.doc.defaultView?.navigator.clipboard.writeText(INSTALL_COMMAND);
+      this.copied.set(true);
+      setTimeout(() => this.copied.set(false), 2000);
+    } catch {
+      // Presse-papiers refusé (contexte non sécurisé, permission) : la commande reste lisible.
     }
-    this.streaming.set(true);
-    this.stopStream = simulateStream(
-      STREAM_SAMPLE[this.lang()],
-      (text) => this.streamed.set(text),
-      () => {
-        this.streaming.set(false);
-        this.streamed.set(null);
-      },
-    );
+  }
+
+  /** Position du pointeur, pour le halo des cartes de fonctionnalités. */
+  trackPointer(event: PointerEvent): void {
+    const card = event.currentTarget as HTMLElement;
+    const rect = card.getBoundingClientRect();
+    card.style.setProperty('--x', `${event.clientX - rect.left}px`);
+    card.style.setProperty('--y', `${event.clientY - rect.top}px`);
   }
 }

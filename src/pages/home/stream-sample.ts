@@ -58,3 +58,40 @@ export const STREAM_SAMPLE: Record<'fr' | 'en', string> = {
     'The counter above kept its value: blocks already displayed are *never* recreated.',
   ].join('\n'),
 };
+
+/**
+ * Texte de la comparaison avant/après : dense en syntaxe qu'un flux coupe en
+ * deux — gras, italique, code inline, lien, tableau, bloc de code.
+ */
+export const COMPARE_SAMPLE: Record<'fr' | 'en', string> = {
+  fr: [
+    'Pour **réduire la latence perçue**, affichez la réponse *pendant* sa génération',
+    'avec `[streaming]="true"` et un [signal](https://angular.dev/guide/signals) qui accumule le texte.',
+    '',
+    '| Mode | Fragments | Rendu |',
+    '| --- | --- | --- |',
+    '| classique | recalcul complet | délimiteurs bruts |',
+    '| **streaming** | dernier bloc | syntaxe réparée |',
+    '',
+    FENCE + 'typescript',
+    'for await (const chunk of llm.stream(prompt)) {',
+    '  this.answer.update((text) => text + chunk);',
+    '}',
+    FENCE,
+  ].join('\n'),
+  en: [
+    'To **cut perceived latency**, show the answer *while* it is generated',
+    'with `[streaming]="true"` and a [signal](https://angular.dev/guide/signals) that accumulates the text.',
+    '',
+    '| Mode | Fragments | Rendering |',
+    '| --- | --- | --- |',
+    '| classic | full recompute | raw delimiters |',
+    '| **streaming** | last block | repaired syntax |',
+    '',
+    FENCE + 'typescript',
+    'for await (const chunk of llm.stream(prompt)) {',
+    '  this.answer.update((text) => text + chunk);',
+    '}',
+    FENCE,
+  ].join('\n'),
+};
