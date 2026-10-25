@@ -1,1 +1,1 @@
-export { MermaidDirective } from './mermaid.directive';
+export { MermaidDirective, type MermaidSecurityLevel } from './mermaid.directive';
